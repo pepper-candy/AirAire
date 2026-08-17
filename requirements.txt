@@ -1,0 +1,16 @@
+futu-api>=9.0.0
+alpha-vantage>=2.3.1
+pandas>=2.0.0
+numpy>=1.24.0
+stable-baselines3>=2.0.0
+gymnasium>=0.29.0
+finrl>=0.3.0
+streamlit>=1.28.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+ta>=0.10.0
+matplotlib>=3.7.0
+plotly>=5.17.0
+torch>=2.0.0
+pyarrow>=14.0.0
+tzdata>=2024.1
