@@ -22,13 +22,17 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_RAW_BLOOMBERG = PROJECT_ROOT / "data" / "raw" / "bloomberg"
 DATA_RAW_FUTU = PROJECT_ROOT / "data" / "raw" / "futu" / "latest"
+DATA_RAW_NEWS = PROJECT_ROOT / "data" / "raw" / "news"
 DATA_PROCESSED = PROJECT_ROOT / "data" / "processed"
 DATA_ENHANCED = PROJECT_ROOT / "data" / "enhanced"
 UNIFIED_PARQUET = DATA_PROCESSED / "unified_data.parquet"
 ENHANCED_PARQUET = DATA_ENHANCED / "enhanced_data.parquet"
 STATE_PKL = PROJECT_ROOT / "state.pkl"
 MODELS_DIR = PROJECT_ROOT / "models"
+NEWS_MODELS_DIR = MODELS_DIR / "news"
+PRICE_ONLY_MODELS_DIR = MODELS_DIR / "price-only"
 BEST_MODEL_PATH = MODELS_DIR / "best_model.zip"
+PRICE_ONLY_BEST_CHECKPOINT = PRICE_ONLY_MODELS_DIR / "checkpoint_2026-04-02.zip"
 
 # ---------------------------------------------------------------------------
 # Asset universe (PLAN.md §3)
@@ -68,13 +72,32 @@ FUTU_FILES = {
     "US.SPX": "SPX_10min.csv",
 }
 
-# Alpha Vantage NEWS_SENTIMENT ticker symbols (Academic Full Tier)
+# Alpha Vantage NEWS_SENTIMENT ticker symbols (Academic Full Tier).
+# Dots are illegal in this endpoint (alphanumeric / : / _ / - only).
 AV_TICKERS = {
     "HK.00700": "TCEHY",
     "HK.03690": "MPNGY",
-    "HK.03750": "3750.HKG",
+    "HK.03750": "300750",
     "US.COST": "COST",
     "US.KO": "KO",
+}
+
+# Extra symbols tried when the primary AV ticker returns an empty feed.
+AV_TICKER_ALIASES: dict[str, tuple[str, ...]] = {
+    "HK.00700": ("TCEHY",),
+    "HK.03690": ("MPNGY",),
+    "HK.03750": ("300750",),
+    "US.COST": ("COST",),
+    "US.KO": ("KO",),
+}
+
+# Topic fallback used only when every ticker alias returns zero articles.
+AV_TOPIC_FALLBACK = {
+    "HK.00700": "technology",
+    "HK.03690": "technology",
+    "HK.03750": "energy_transportation,manufacturing",
+    "US.COST": "retail_wholesale",
+    "US.KO": "retail_wholesale",
 }
 
 LOT_SIZES = {
@@ -106,8 +129,13 @@ INITIAL_CASH = float(os.getenv("INITIAL_CASH", "1000000"))
 FUTU_MAX_REQUESTS = 60
 FUTU_WINDOW_SECONDS = 30
 
-# Alpha Vantage Academic: ethical cap — once per ticker per 5 minutes
+# Alpha Vantage Academic / education: no 25/day cap. Historical backfill can
+# run ~1 call/sec. Live inference still uses the 5-minute ethical cap below.
+# If you see "API call frequency" Notes, raise this (e.g. 3 or 12).
 NEWS_MIN_INTERVAL_SECONDS = 5 * 60
+NEWS_HISTORICAL_INTERVAL_SECONDS = float(os.getenv("NEWS_HISTORICAL_INTERVAL", "1"))
+NEWS_HEADLINE_WINDOW = 10
+ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 BLOOMBERG_STALE_DAYS = 5
 

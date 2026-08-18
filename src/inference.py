@@ -24,20 +24,21 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 import numpy as np
-import requests
 from dotenv import load_dotenv
 
 from src.data_loader import load_processed
+from src.news_loader import latest_ticker_score
 from src.trading_env import TradingEnv
 from src.utils import (
-    AV_TICKERS,
     BEST_MODEL_PATH,
     CORE_TICKERS,
+    ENHANCED_PARQUET,
     FUTU_HOST,
     FUTU_PORT,
     INITIAL_CASH,
     LOT_SIZES,
     NEWS_MIN_INTERVAL_SECONDS,
+    NEWS_MODELS_DIR,
     STATE_PKL,
     TICKER_NAMES,
     RateLimiter,
@@ -52,7 +53,6 @@ from src.utils import (
 load_dotenv()
 logger = setup_logging("airaire.inference")
 
-ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 futu_limiter = RateLimiter()
 
 
@@ -172,42 +172,7 @@ class NewsPoller:
         return scores
 
     def _call_alpha_vantage(self, ticker: str) -> float:
-        if not self.api_key:
-            logger.warning("NewsPoller: ALPHAVANTAGE_API_KEY unset — sentiment for %s stays at cache.", ticker)
-            return self._cache.get(ticker, 0.0)
-        av_symbol = AV_TICKERS.get(ticker, ticker)
-        params = {
-            "function": "NEWS_SENTIMENT",
-            "tickers": av_symbol,
-            "limit": 10,
-            "apikey": self.api_key,
-        }
-        try:
-            resp = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=20)
-            resp.raise_for_status()
-            payload = resp.json()
-        except requests.RequestException as exc:
-            logger.warning("NewsPoller HTTP error for %s: %s", ticker, exc)
-            return self._cache.get(ticker, 0.0)
-        if not isinstance(payload, dict) or "feed" not in payload:
-            logger.warning("NewsPoller unexpected payload for %s: %s", ticker, list(payload)[:6] if isinstance(payload, dict) else type(payload))
-            return self._cache.get(ticker, 0.0)
-        scores = []
-        for item in payload.get("feed") or []:
-            for ts in item.get("ticker_sentiment") or []:
-                if str(ts.get("ticker", "")).upper() == av_symbol.upper():
-                    try:
-                        scores.append(float(ts.get("ticker_sentiment_score", 0.0)))
-                    except (TypeError, ValueError):
-                        continue
-            if not scores:
-                try:
-                    scores.append(float(item.get("overall_sentiment_score", 0.0)))
-                except (TypeError, ValueError):
-                    continue
-        avg = float(np.clip(np.mean(scores) if scores else 0.0, -1.0, 1.0))
-        logger.info("NewsPoller %s (%s) score=%.3f n_headlines=%d", ticker, av_symbol, avg, len(scores))
-        return avg
+        return latest_ticker_score(ticker, api_key=self.api_key)
 
 
 # ---------------------------------------------------------------------------
@@ -409,7 +374,10 @@ def reconcile_with_futu(state: BotState, broker: FutuPaperBroker) -> BotState:
     return state
 
 
-def load_policy(model_path: Path = BEST_MODEL_PATH):
+def load_policy(model_path: Path | None = None):
+    if model_path is None:
+        news_best = NEWS_MODELS_DIR / "best_model.zip"
+        model_path = news_best if news_best.exists() else BEST_MODEL_PATH
     if not model_path.exists():
         logger.warning("No trained model at %s — policy will HOLD (action=0).", model_path)
         return None
@@ -449,10 +417,16 @@ def run_loop(once: bool = False, dry_run: bool = False, poll_seconds: int = 60) 
     news = NewsPoller()
     broker = FutuPaperBroker(dry_run=dry_run)
     try:
-        panel = load_processed()
+        if ENHANCED_PARQUET.exists():
+            import pandas as pd
+
+            panel = pd.read_parquet(ENHANCED_PARQUET)
+            logger.info("Loaded enhanced panel with news_score for the local env.")
+        else:
+            panel = load_processed()
         env = TradingEnv(df=panel if panel is not None and not panel.empty else None)
     except Exception as exc:  # noqa: BLE001 — parquet is optional in Phase 1
-        logger.warning("Could not load unified parquet (%s); TradingEnv will use synthetic bars.", exc)
+        logger.warning("Could not load unified/enhanced parquet (%s); TradingEnv will use synthetic bars.", exc)
         env = TradingEnv()
     model = load_policy()
 

@@ -44,6 +44,10 @@ DRAWDOWN_LAMBDA = 1.0
 TRADING_DAYS = 252
 OBS_CLIP = 10.0
 REWARD_CLIP = 10.0
+MAX_PRICE = 1.0e6
+MAX_HOLDING = 1.0e6
+MAX_EQUITY = 1.0e12
+MIN_EQUITY = 1.0e-6
 
 
 def _safe_float(value: object, default: float = 0.0) -> float:
@@ -79,6 +83,12 @@ def observation_dim(lookback_bars: int = LOOKBACK_BARS) -> int:
     )
 
 
+def news_obs_slice(lookback_bars: int = LOOKBACK_BARS) -> slice:
+    """Slice of the concatenated observation that holds the 5 news scores."""
+    start = lookback_bars * N_CORE * len(OHLCV_FIELDS) + _long_term_dim() + 5
+    return slice(start, start + N_CORE)
+
+
 class TradingEnv(gym.Env):
     """FinRL-style continuous-action env. One ``step()`` = one bar inside a 30-day window."""
 
@@ -87,6 +97,7 @@ class TradingEnv(gym.Env):
     def __init__(
         self,
         df: pd.DataFrame | None = None,
+        news_df: pd.DataFrame | None = None,
         lookback_bars: int = LOOKBACK_BARS,
         window_days: int = WINDOW_DAYS,
         initial_cash: float = INITIAL_CASH,
@@ -99,11 +110,15 @@ class TradingEnv(gym.Env):
         self.initial_cash = float(initial_cash)
         self.render_mode = render_mode
         self._news_scores = {t: 0.0 for t in CORE_TICKERS}
+        self._news_live = False
         if news_scores:
             self._news_scores.update(news_scores)
+            self._news_live = True
 
         self.df = self._prepare_panel(df)
         self.datetimes = self._unique_datetimes()
+        self._close_matrix = self._build_close_matrix()
+        self._news_aligned = self._prepare_news(news_df)
         self._bar_index = 0
         self._cash = self.initial_cash
         self._holdings = np.zeros(N_CORE, dtype=np.float64)  # shares
@@ -111,6 +126,10 @@ class TradingEnv(gym.Env):
         self._equity_curve: list[float] = [self.initial_cash]
         self._last_equity = self.initial_cash
         self._last_good_prices = np.ones(N_CORE, dtype=np.float64)
+        if len(self._close_matrix):
+            seed_px = self._close_matrix[min(self.lookback_bars, len(self._close_matrix) - 1)]
+            seed_px = np.where(np.isfinite(seed_px) & (seed_px > 0), seed_px, 1.0)
+            self._last_good_prices = seed_px.astype(np.float64)
 
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(N_CORE,), dtype=np.float32)
         self.observation_space = spaces.Box(
@@ -140,6 +159,12 @@ class TradingEnv(gym.Env):
         ohlc = ["open", "high", "low", "close"]
         panel[ohlc] = panel.groupby("ticker", group_keys=False)[ohlc].ffill()
         panel[ohlc] = panel[ohlc].fillna(0.0)
+        if "news_score" in panel.columns:
+            panel["news_score"] = pd.to_numeric(panel["news_score"], errors="coerce")
+            panel["news_score"] = panel.groupby("ticker", group_keys=False)["news_score"].ffill().fillna(0.0)
+        if "sentiment_score" in panel.columns:
+            panel["sentiment_score"] = pd.to_numeric(panel["sentiment_score"], errors="coerce")
+            panel["sentiment_score"] = panel.groupby("ticker", group_keys=False)["sentiment_score"].ffill().fillna(0.0)
         return panel.sort_values(["datetime", "ticker"]).reset_index(drop=True)
 
     def _unique_datetimes(self) -> pd.DatetimeIndex:
@@ -152,10 +177,85 @@ class TradingEnv(gym.Env):
             )
         return idx
 
+    def _build_close_matrix(self) -> np.ndarray:
+        """datetime × CORE_TICKERS close matrix — O(1) price lookup per step."""
+        n = len(self.datetimes)
+        mat = np.ones((n, N_CORE), dtype=np.float64)
+        if n == 0 or self.df.empty:
+            return mat
+        wide = self.df.pivot_table(index="datetime", columns="ticker", values="close", aggfunc="last")
+        wide = wide.reindex(self.datetimes)
+        for i, ticker in enumerate(CORE_TICKERS):
+            if ticker in wide.columns:
+                col = pd.to_numeric(wide[ticker], errors="coerce").ffill().bfill()
+                vals = col.to_numpy(dtype=np.float64)
+                vals = np.where(np.isfinite(vals) & (vals > 0), vals, np.nan)
+                # leftover NaNs stay 1.0 so leverage math doesn't explode
+                finite = np.isfinite(vals)
+                if finite.any():
+                    mat[finite, i] = vals[finite]
+        return mat
+
+    def _prepare_news(self, news_df: pd.DataFrame | None) -> np.ndarray:
+        """Align sentiment onto ``self.datetimes`` (forward-fill, no NaNs).
+
+        Preference: explicit ``news_df`` → ``news_score`` / ``sentiment_score``
+        column on the price panel → zeros. Shape ``(n_bars, N_CORE)``.
+        """
+        n = len(self.datetimes)
+        aligned = np.zeros((max(n, 1), N_CORE), dtype=np.float32)
+        source = None
+        if news_df is not None and not news_df.empty:
+            source = news_df.copy()
+        elif not self.df.empty:
+            for col in ("sentiment_score", "news_score"):
+                if col in self.df.columns:
+                    source = self.df[["datetime", "ticker", col]].rename(columns={col: "sentiment_score"})
+                    break
+        if source is None or source.empty or n == 0:
+            return aligned
+
+        if "sentiment_score" not in source.columns:
+            if "news_score" in source.columns:
+                source = source.rename(columns={"news_score": "sentiment_score"})
+            else:
+                logger.warning("News frame missing sentiment_score; block (4) stays 0.")
+                return aligned
+
+        source = source.copy()
+        source["datetime"] = pd.to_datetime(source["datetime"], errors="coerce")
+        if getattr(source["datetime"].dt, "tz", None) is not None:
+            source["datetime"] = source["datetime"].dt.tz_convert("UTC").dt.tz_localize(None)
+        source["sentiment_score"] = pd.to_numeric(source["sentiment_score"], errors="coerce").clip(-1.0, 1.0)
+        source = source.dropna(subset=["datetime", "ticker", "sentiment_score"])
+        if source.empty:
+            return aligned
+
+        wide = source.pivot_table(index="datetime", columns="ticker", values="sentiment_score", aggfunc="last")
+        union_index = wide.index.union(self.datetimes).sort_values()
+        wide = wide.reindex(union_index).sort_index().ffill()
+        wide = wide.reindex(self.datetimes)
+        for i, ticker in enumerate(CORE_TICKERS):
+            if ticker in wide.columns:
+                col = wide[ticker].fillna(0.0).clip(-1.0, 1.0).to_numpy(dtype=np.float32)
+                aligned[: len(col), i] = col
+        nonzero = float(np.mean(np.abs(aligned) > 1e-12)) if aligned.size else 0.0
+        if nonzero < 1e-12:
+            logger.warning("News block is all zeros after alignment. Check data/raw/news/ or Alpha Vantage coverage.")
+        else:
+            logger.info(
+                "News block aligned: bars=%d coverage=%.1f%% sample=%s",
+                n,
+                100.0 * nonzero,
+                np.round(aligned[min(self.lookback_bars, max(n - 1, 0))], 3).tolist(),
+            )
+        return aligned
+
     def set_news_scores(self, scores: dict[str, float]) -> None:
         for ticker, value in scores.items():
             if ticker in self._news_scores:
                 self._news_scores[ticker] = float(np.clip(value, -1.0, 1.0))
+        self._news_live = True
 
     # ------------------------------------------------------------------
     # Gym API
@@ -326,17 +426,27 @@ class TradingEnv(gym.Env):
         return np.asarray(calendar_feature_vector(ref), dtype=np.float32)
 
     def _news_score_features(self) -> np.ndarray:
-        """(4) Intraday sentiment in [-1, 1] for each core ticker."""
+        """(4) Intraday sentiment in [-1, 1] for each core ticker.
+
+        Live inference (``set_news_scores``) wins over the historical matrix so
+        paper trading always sees the latest Alpha Vantage poll.
+        """
+        if self._news_live:
+            return np.asarray([self._news_scores.get(t, 0.0) for t in CORE_TICKERS], dtype=np.float32)
+        if self._news_aligned is not None and len(self._news_aligned):
+            i = min(self._bar_index, len(self._news_aligned) - 1)
+            return np.clip(self._news_aligned[i], -1.0, 1.0).astype(np.float32)
         return np.asarray([self._news_scores.get(t, 0.0) for t in CORE_TICKERS], dtype=np.float32)
 
     def _inventory_features(self) -> np.ndarray:
         """(5) Holdings as portfolio-weight ratios plus cash fraction."""
         prices = self._current_closes()
-        equity = max(_safe_float(self._mark_to_market(prices), self.initial_cash), 1e-9)
-        notionals = self._holdings * prices
+        equity = float(np.clip(_safe_float(self._mark_to_market(prices), self.initial_cash), MIN_EQUITY, MAX_EQUITY))
+        holdings = np.clip(_finite_array(self._holdings), -MAX_HOLDING, MAX_HOLDING)
+        notionals = holdings * prices
         weights = _finite_array(notionals / equity)
-        cash_frac = _safe_float(self._cash / equity, 1.0)
-        return np.concatenate([weights, np.asarray([cash_frac])]).astype(np.float32)
+        cash_frac = float(np.clip(_safe_float(self._cash / equity, 1.0), -MAX_LEVERAGE, MAX_LEVERAGE))
+        return np.concatenate([np.clip(weights, -MAX_LEVERAGE, MAX_LEVERAGE), np.asarray([cash_frac])]).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Portfolio mechanics
@@ -348,35 +458,35 @@ class TradingEnv(gym.Env):
         return self.datetimes[i]
 
     def _current_closes(self) -> np.ndarray:
-        dt = self._current_dt()
-        snap = self.df[self.df["datetime"] == dt]
-        prices = []
-        for i, ticker in enumerate(CORE_TICKERS):
-            row = snap[snap["ticker"] == ticker]
-            if row.empty:
-                hist = self.df[(self.df["ticker"] == ticker) & (self.df["datetime"] <= dt)]
-                raw = float(hist["close"].iloc[-1]) if not hist.empty else self._last_good_prices[i]
-            else:
-                raw = float(row["close"].iloc[-1])
-            px = _safe_float(raw, self._last_good_prices[i])
-            if px <= 0:
-                px = float(self._last_good_prices[i]) if self._last_good_prices[i] > 0 else 1.0
-            prices.append(px)
-            self._last_good_prices[i] = px
-        return np.asarray(prices, dtype=np.float64)
+        if self._close_matrix is None or len(self._close_matrix) == 0:
+            return np.array(self._last_good_prices, dtype=np.float64, copy=True)
+        i = min(self._bar_index, len(self._close_matrix) - 1)
+        raw = self._close_matrix[i]
+        prices = np.where(np.isfinite(raw) & (raw > 0), raw, self._last_good_prices)
+        prices = np.clip(_finite_array(prices, fill=1.0), 0.01, MAX_PRICE)
+        self._last_good_prices = prices
+        return prices
 
     def _mark_to_market(self, prices: np.ndarray) -> float:
-        return _safe_float(self._cash + np.dot(self._holdings, _finite_array(prices)), self._last_equity)
+        prices = np.clip(_finite_array(prices), 0.01, MAX_PRICE)
+        holdings = np.clip(_finite_array(self._holdings), -MAX_HOLDING, MAX_HOLDING)
+        cash = float(np.clip(_safe_float(self._cash, 0.0), -MAX_EQUITY, MAX_EQUITY))
+        value = cash + float(np.dot(holdings, prices))
+        if not np.isfinite(value) or abs(value) > MAX_EQUITY:
+            return float(np.clip(self._last_equity, MIN_EQUITY, MAX_EQUITY))
+        return _safe_float(value, self._last_equity)
 
     def _rebalance(self, target_weights: np.ndarray, prices: np.ndarray) -> None:
-        equity = max(self._mark_to_market(prices), 1e-9)
+        prices = np.clip(_finite_array(prices), 0.01, MAX_PRICE)
+        equity = float(np.clip(self._mark_to_market(prices), MIN_EQUITY, MAX_EQUITY))
         target_notional = _finite_array(target_weights) * equity
         safe_prices = np.where(prices > 0, prices, np.inf)
         target_shares = target_notional / safe_prices
         target_shares = np.where(np.isfinite(target_shares), target_shares, 0.0)
+        target_shares = np.clip(target_shares, -MAX_HOLDING, MAX_HOLDING)
         delta = target_shares - self._holdings
         trade_cash = _safe_float(np.dot(delta, prices), 0.0)
-        self._cash -= trade_cash
+        self._cash = float(np.clip(_safe_float(self._cash - trade_cash, 0.0), -MAX_EQUITY, MAX_EQUITY))
         self._holdings = target_shares
         if not np.isfinite(self._cash) or self._cash < 0:
             logger.debug("Cash invalid (%.2f); clamping to 0 for this bar.", self._cash)
@@ -385,13 +495,18 @@ class TradingEnv(gym.Env):
     def _sharpe_drawdown_reward(self) -> float:
         """Reward = rolling Sharpe − λ × max-drawdown penalty (PLAN.md §5)."""
         rets = _finite_array(np.asarray(self._returns[-SHARPE_WINDOW :], dtype=np.float64))
+        rets = np.clip(rets, -1.0, 1.0)
         if len(rets) < 2:
             sharpe = 0.0
         else:
             std = _safe_float(rets.std(), 0.0)
             sharpe = _safe_float(rets.mean() / (std + 1e-9) * np.sqrt(TRADING_DAYS), 0.0)
 
-        curve = _finite_array(np.asarray(self._equity_curve, dtype=np.float64), fill=self.initial_cash)
+        curve = np.clip(
+            _finite_array(np.asarray(self._equity_curve, dtype=np.float64), fill=self.initial_cash),
+            MIN_EQUITY,
+            MAX_EQUITY,
+        )
         if len(curve) < 2:
             return 0.0
         peak = np.maximum.accumulate(curve)

@@ -22,8 +22,10 @@ from src.utils import (
     ALL_TICKERS,
     BLOOMBERG_FILES,
     BLOOMBERG_STALE_DAYS,
+    CORE_TICKERS,
     DATA_RAW_BLOOMBERG,
     DATA_RAW_FUTU,
+    ENHANCED_PARQUET,
     FUTU_FILES,
     UNIFIED_PARQUET,
     setup_logging,
@@ -32,6 +34,7 @@ from src.utils import (
 logger = setup_logging("airaire.data_loader")
 
 STANDARD_COLUMNS = ["datetime", "ticker", "open", "high", "low", "close", "volume"]
+ENHANCED_COLUMNS = STANDARD_COLUMNS + ["news_score"]
 
 # Map messy Bloomberg / Futu headers onto the canonical names (case-insensitive).
 COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
@@ -237,6 +240,114 @@ def load_processed(path: Path | None = None) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
+def _naive_datetime(series: pd.Series) -> pd.Series:
+    parsed = pd.to_datetime(series, utc=True, errors="coerce")
+    return parsed.dt.tz_localize(None)
+
+
+def merge_price_news(price_df: pd.DataFrame, news_df: pd.DataFrame | None) -> pd.DataFrame:
+    """As-of merge news onto each (datetime, ticker) price bar, then forward-fill."""
+    if price_df is None or price_df.empty:
+        return pd.DataFrame(columns=ENHANCED_COLUMNS)
+    prices = price_df.copy()
+    prices["datetime"] = _naive_datetime(prices["datetime"])
+    prices = prices.dropna(subset=["datetime"]).sort_values(["ticker", "datetime"]).reset_index(drop=True)
+
+    if news_df is None or news_df.empty:
+        prices["news_score"] = 0.0
+        logger.warning("No news rows to merge — news_score filled with 0.0.")
+        return prices
+
+    news = news_df.copy()
+    score_col = "sentiment_score" if "sentiment_score" in news.columns else "news_score"
+    if score_col not in news.columns:
+        prices["news_score"] = 0.0
+        logger.warning("news_df missing sentiment_score/news_score — filling 0.0.")
+        return prices
+    news["datetime"] = _naive_datetime(news["datetime"])
+    news["sentiment_score"] = pd.to_numeric(news[score_col], errors="coerce").clip(-1.0, 1.0)
+    news = news.dropna(subset=["datetime", "ticker", "sentiment_score"])
+    news = news.sort_values(["ticker", "datetime"]).drop_duplicates(subset=["ticker", "datetime"], keep="last")
+
+    merged_parts: list[pd.DataFrame] = []
+    for ticker, g_price in prices.groupby("ticker", sort=False):
+        g_price = g_price.sort_values("datetime")
+        g_news = news.loc[news["ticker"] == ticker, ["datetime", "sentiment_score"]].sort_values("datetime")
+        if g_news.empty:
+            part = g_price.copy()
+            part["news_score"] = 0.0
+            merged_parts.append(part)
+            continue
+        part = pd.merge_asof(
+            g_price,
+            g_news,
+            on="datetime",
+            direction="backward",
+        )
+        part["news_score"] = part["sentiment_score"].ffill().fillna(0.0)
+        part = part.drop(columns=["sentiment_score"])
+        merged_parts.append(part)
+
+    enhanced = pd.concat(merged_parts, ignore_index=True).sort_values(["datetime", "ticker"]).reset_index(drop=True)
+    core = enhanced[enhanced["ticker"].isin(CORE_TICKERS)]
+    if core.empty:
+        coverage = 0.0
+    else:
+        coverage = float((core["news_score"].abs() > 1e-12).mean())
+    per_ticker = (
+        enhanced[enhanced["ticker"].isin(CORE_TICKERS)]
+        .groupby("ticker")["news_score"]
+        .apply(lambda s: float((s.abs() > 1e-12).mean()))
+        .to_dict()
+    )
+    logger.info(
+        "News coverage: %.1f%% of core-ticker bars have |news_score| > 0  per-ticker=%s",
+        100.0 * coverage,
+        {k: f"{100.0 * v:.1f}%" for k, v in per_ticker.items()},
+    )
+    return enhanced
+
+
+def load_enhanced_data(
+    bloomberg_dir: Path | None = None,
+    news_df: pd.DataFrame | None = None,
+    *,
+    save: bool = True,
+    force_news_fetch: bool = False,
+    output_path: Path | None = None,
+) -> pd.DataFrame:
+    """Load unified price data, merge last-10-headline news scores, write enhanced parquet.
+
+    Returns columns: datetime, ticker, open, high, low, close, volume, news_score.
+    """
+    if bloomberg_dir is not None:
+        prices = load_unified(bloomberg_dir=bloomberg_dir, save=True)
+    else:
+        prices = load_processed()
+
+    if news_df is None:
+        from src.news_loader import load_all_news
+
+        if prices.empty:
+            start = end = None
+        else:
+            start = prices["datetime"].min()
+            end = prices["datetime"].max()
+        try:
+            news_df = load_all_news(start, end, force_fetch=force_news_fetch)
+        except Exception as exc:  # noqa: BLE001 — news is optional; never block price training
+            logger.warning("News fetch failed (%s). Continuing with news_score=0.0.", exc)
+            news_df = pd.DataFrame(columns=["datetime", "ticker", "sentiment_score"])
+
+    enhanced = merge_price_news(prices, news_df)
+    if save and not enhanced.empty:
+        path = output_path or ENHANCED_PARQUET
+        path.parent.mkdir(parents=True, exist_ok=True)
+        enhanced.to_parquet(path, index=False)
+        logger.info("Wrote %s (%d rows)", path, len(enhanced))
+    return enhanced
+
+
 def panel_to_wide(df: pd.DataFrame, field: str = "close") -> pd.DataFrame:
     """Pivot long OHLCV to a datetime × ticker matrix for a single field."""
     if df.empty:
@@ -249,4 +360,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     panel = load_unified()
     print(panel.head() if not panel.empty else "No data yet — drop Bloomberg CSVs into data/raw/bloomberg/")
-    print(f"rows={len(panel)} tickers={panel['ticker'].nunique() if not panel.empty else 0}")
+    print(f"price rows={len(panel)} tickers={panel['ticker'].nunique() if not panel.empty else 0}")
+    enhanced = load_enhanced_data()
+    print(enhanced.head() if not enhanced.empty else "Enhanced panel empty.")
+    print(f"enhanced rows={len(enhanced)} cols={list(enhanced.columns)}")
