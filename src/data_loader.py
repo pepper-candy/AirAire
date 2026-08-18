@@ -119,6 +119,12 @@ def load_ticker_csv(path: Path, ticker: str) -> pd.DataFrame:
     if raw.empty:
         logger.warning("Empty CSV for %s: %s", ticker, path)
         return pd.DataFrame(columns=STANDARD_COLUMNS)
+
+    # 自动检测无表头：如果第一列名包含日期分隔符，则重新读取并指定列名
+    first_col_name = str(raw.columns[0])   # 添加这一行！
+    if '/' in first_col_name or '-' in first_col_name or ':' in first_col_name:
+        raw = pd.read_csv(path, header=None, names=['datetime', 'open', 'high', 'low', 'close', 'volume'])
+
     return normalize_ohlcv(raw, ticker)
 
 

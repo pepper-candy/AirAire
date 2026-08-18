@@ -49,23 +49,23 @@ TICKER_NAMES = {
 
 # Bloomberg HP export filenames vs Futu incremental filenames
 BLOOMBERG_FILES = {
-    "HK.00700": "0700_HK_1min.csv",
-    "HK.03690": "3690_HK_1min.csv",
-    "HK.03750": "3750_HK_1min.csv",
-    "US.COST": "COST_US_1min.csv",
-    "US.KO": "KO_US_1min.csv",
-    "HK.HSI": "HSI_1min.csv",
-    "US.SPX": "SPX_1min.csv",
+    "HK.00700": "0700_HK_10min.csv",
+    "HK.03690": "3690_HK_10min.csv",
+    "HK.03750": "3750_HK_10min.csv",
+    "US.COST": "COST_US_10min.csv",
+    "US.KO": "KO_US_10min.csv",
+    "HK.HSI": "HSI_10min.csv",
+    "US.SPX": "SPX_10min.csv",
 }
 
 FUTU_FILES = {
-    "HK.00700": "00700_HK_1min.csv",
-    "HK.03690": "03690_HK_1min.csv",
-    "HK.03750": "03750_HK_1min.csv",
-    "US.COST": "COST_US_1min.csv",
-    "US.KO": "KO_US_1min.csv",
-    "HK.HSI": "HSI_1min.csv",
-    "US.SPX": "SPX_1min.csv",
+    "HK.00700": "00700_HK_10min.csv",
+    "HK.03690": "03690_HK_10min.csv",
+    "HK.03750": "03750_HK_10min.csv",
+    "US.COST": "COST_US_10min.csv",
+    "US.KO": "KO_US_10min.csv",
+    "HK.HSI": "HSI_10min.csv",
+    "US.SPX": "SPX_10min.csv",
 }
 
 # Alpha Vantage NEWS_SENTIMENT ticker symbols (Academic Full Tier)
