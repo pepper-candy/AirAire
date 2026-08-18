@@ -23,6 +23,7 @@ if str(_ROOT) not in sys.path:
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
+import torch
 
 from src.data_loader import load_processed, panel_to_wide
 from src.trading_env import LOOKBACK_BARS, TRADING_DAYS, TradingEnv
@@ -110,18 +111,25 @@ def make_vec_env(df: pd.DataFrame, window_days: int) -> DummyVecEnv:
     return DummyVecEnv([_factory])
 
 
-def make_ppo(env: DummyVecEnv, seed: int) -> PPO:
+def make_ppo(env: DummyVecEnv, seed: int, device: str = "cpu") -> PPO:
+    # MlpPolicy on CUDA is slower and was the device that produced NaN loc on Colab.
     return PPO(
         "MlpPolicy",
         env,
         verbose=1,
         seed=seed,
+        device=device,
         n_steps=PPO_N_STEPS,
         batch_size=64,
         learning_rate=3e-4,
         gamma=0.99,
+        max_grad_norm=0.5,
         policy_kwargs={"net_arch": dict(pi=[256, 256], vf=[256, 256])},
     )
+
+
+def policy_has_nan(model: PPO) -> bool:
+    return any(not torch.isfinite(p).all() for p in model.policy.parameters())
 
 
 def timesteps_for_window(df: pd.DataFrame, epochs: int) -> int:
@@ -135,25 +143,48 @@ def evaluate_policy(model: PPO, df: pd.DataFrame, window_days: int) -> tuple[flo
     """Walk the window once, deterministically. Returns return, Sharpe, max DD, final equity."""
     env = TradingEnv(df=df, initial_cash=INITIAL_CASH, window_days=window_days)
     obs, _ = env.reset()
-    terminated = truncated = False
-    while not (terminated or truncated):
-        action, _ = model.predict(obs, deterministic=True)
-        obs, _, terminated, truncated, _ = env.step(action)
+    if not np.all(np.isfinite(obs)):
+        logger.warning("evaluate_policy: invalid initial observation. Returning flat metrics.")
+        return 0.0, 0.0, 0.0, INITIAL_CASH
 
-    curve = np.asarray(env._equity_curve, dtype=np.float64)
+    terminated = truncated = False
+    hold = np.zeros(env.action_space.shape, dtype=np.float32)
+    while not (terminated or truncated):
+        try:
+            action, _ = model.predict(obs, deterministic=True)
+        except ValueError as exc:
+            logger.warning("evaluate_policy: predict failed (%s). Holding for the rest of the window.", exc)
+            action = hold
+        action = np.nan_to_num(np.asarray(action, dtype=np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+        if not np.all(np.isfinite(action)):
+            logger.warning("evaluate_policy: non-finite action. Holding.")
+            action = hold
+        obs, _, terminated, truncated, _ = env.step(action)
+        if not np.all(np.isfinite(obs)):
+            logger.warning("evaluate_policy: non-finite obs after step. Stopping walk.")
+            break
+
+    curve = np.nan_to_num(np.asarray(env._equity_curve, dtype=np.float64), nan=INITIAL_CASH)
     start_eq = float(curve[0]) if len(curve) else INITIAL_CASH
     end_eq = float(curve[-1]) if len(curve) else INITIAL_CASH
-    cum_ret = (end_eq / start_eq) - 1.0 if start_eq else 0.0
+    if not np.isfinite(start_eq) or start_eq == 0:
+        start_eq = INITIAL_CASH
+    if not np.isfinite(end_eq):
+        end_eq = start_eq
+    cum_ret = (end_eq / start_eq) - 1.0
 
-    rets = np.asarray(env._returns, dtype=np.float64)
+    rets = np.nan_to_num(np.asarray(env._returns, dtype=np.float64), nan=0.0)
     if len(rets) < 2 or not np.isfinite(rets.std()) or float(rets.std()) < 1e-12:
         sharpe = 0.0
     else:
         sharpe = float(rets.mean() / (rets.std() + 1e-9) * np.sqrt(TRADING_DAYS * BARS_PER_DAY))
+        if not np.isfinite(sharpe):
+            sharpe = 0.0
 
     peak = np.maximum.accumulate(curve) if len(curve) else np.asarray([start_eq])
-    dd = (peak - curve) / np.maximum(peak, 1e-9)
-    max_dd = float(dd.max()) if len(dd) else 0.0
+    dd = (peak - curve) / np.maximum(np.abs(peak), 1e-6)
+    dd = dd[np.isfinite(dd)]
+    max_dd = float(np.clip(dd.max(), 0.0, 1.0)) if len(dd) else 0.0
     return cum_ret, sharpe, max_dd, end_eq
 
 
@@ -171,6 +202,7 @@ def train(
     window_days: int = DEFAULT_WINDOW_DAYS,
     output: Path | None = None,
     seed: int = 42,
+    device: str = "cpu",
 ) -> list[WindowMetrics]:
     output_dir = Path(output) if output is not None else MODELS_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -200,6 +232,7 @@ def train(
     metrics: list[WindowMetrics] = []
     best_sharpe = -np.inf
     best_ckpt: Path | None = None
+    last_good_ckpt: Path | None = None
     n_windows = len(windows)
 
     for win in windows:
@@ -217,12 +250,30 @@ def train(
 
         vec_env = make_vec_env(win.df, window_days)
         if model is None:
-            model = make_ppo(vec_env, seed=seed)
+            model = make_ppo(vec_env, seed=seed, device=device)
         else:
             model.set_env(vec_env)
 
         # Sequential fine-tune: keep timesteps counter so PPO continues in "time".
         model.learn(total_timesteps=steps, reset_num_timesteps=False, progress_bar=False)
+
+        saved: Path | None = None
+        if not test:
+            ckpt = output_dir / f"checkpoint_{win.end.date()}"
+            model.save(str(ckpt))
+            saved = ckpt.with_suffix(".zip")
+            logger.info("Saved %s", saved)
+
+        if policy_has_nan(model):
+            logger.error(
+                "Window %d: policy weights contain NaN after learn(). Skipping eval; not promoting this checkpoint.",
+                win.index,
+            )
+            if last_good_ckpt is not None and last_good_ckpt.exists():
+                logger.warning("Reloading last finite checkpoint %s", last_good_ckpt)
+                model = PPO.load(str(last_good_ckpt), env=vec_env, device=device)
+            vec_env.close()
+            continue
 
         cum_ret, sharpe, max_dd, equity = evaluate_policy(model, win.df, window_days)
         row = WindowMetrics(
@@ -246,12 +297,9 @@ def train(
             equity,
         )
 
-        if not test:
-            ckpt = output_dir / f"checkpoint_{win.end.date()}"
-            model.save(str(ckpt))
-            saved = ckpt.with_suffix(".zip")
-            logger.info("Saved %s", saved)
-            if sharpe > best_sharpe:
+        if saved is not None:
+            last_good_ckpt = saved
+            if np.isfinite(sharpe) and sharpe > best_sharpe:
                 best_sharpe = sharpe
                 best_ckpt = saved
 
@@ -277,6 +325,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--window-days", type=int, default=DEFAULT_WINDOW_DAYS, help="Session days per window (default: 30).")
     p.add_argument("--output", type=Path, default=MODELS_DIR, help="Checkpoint directory (default: models/).")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--device",
+        default="cpu",
+        choices=("cpu", "cuda", "auto"),
+        help="PPO device. Default cpu (SB3 recommendation for MlpPolicy).",
+    )
     return p.parse_args(argv)
 
 
@@ -288,4 +342,5 @@ if __name__ == "__main__":
         window_days=args.window_days,
         output=args.output,
         seed=args.seed,
+        device=args.device,
     )

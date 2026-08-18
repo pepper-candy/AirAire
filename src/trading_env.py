@@ -42,6 +42,21 @@ MAX_LEVERAGE = 2.0
 SHARPE_WINDOW = 20
 DRAWDOWN_LAMBDA = 1.0
 TRADING_DAYS = 252
+OBS_CLIP = 10.0
+REWARD_CLIP = 10.0
+
+
+def _safe_float(value: object, default: float = 0.0) -> float:
+    """NaN is truthy in Python, so ``x or default`` will not catch it."""
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+    return default if not np.isfinite(number) else number
+
+
+def _finite_array(values: np.ndarray, fill: float = 0.0) -> np.ndarray:
+    return np.nan_to_num(np.asarray(values, dtype=np.float64), nan=fill, posinf=fill, neginf=fill)
 
 
 def _empty_price_window() -> np.ndarray:
@@ -95,6 +110,7 @@ class TradingEnv(gym.Env):
         self._returns: list[float] = []
         self._equity_curve: list[float] = [self.initial_cash]
         self._last_equity = self.initial_cash
+        self._last_good_prices = np.ones(N_CORE, dtype=np.float64)
 
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(N_CORE,), dtype=np.float32)
         self.observation_space = spaces.Box(
@@ -117,6 +133,13 @@ class TradingEnv(gym.Env):
             raise ValueError(f"TradingEnv df missing columns: {missing}")
         panel = df.copy()
         panel["datetime"] = pd.to_datetime(panel["datetime"])
+        for col in ("open", "high", "low", "close", "volume"):
+            panel[col] = pd.to_numeric(panel[col], errors="coerce")
+        panel["volume"] = panel["volume"].fillna(0.0)
+        panel = panel.sort_values(["ticker", "datetime"])
+        ohlc = ["open", "high", "low", "close"]
+        panel[ohlc] = panel.groupby("ticker", group_keys=False)[ohlc].ffill()
+        panel[ohlc] = panel[ohlc].fillna(0.0)
         return panel.sort_values(["datetime", "ticker"]).reset_index(drop=True)
 
     def _unique_datetimes(self) -> pd.DatetimeIndex:
@@ -148,6 +171,7 @@ class TradingEnv(gym.Env):
         self._returns = []
         self._equity_curve = [self.initial_cash]
         self._last_equity = self.initial_cash
+        self._last_good_prices = np.ones(N_CORE, dtype=np.float64)
         obs = self._get_obs()
         return obs, {"bar_index": self._bar_index, "datetime": self._current_dt()}
 
@@ -155,6 +179,7 @@ class TradingEnv(gym.Env):
         action = np.asarray(action, dtype=np.float64).reshape(-1)
         if action.shape[0] != N_CORE:
             raise ValueError(f"Expected action of shape ({N_CORE},), got {action.shape}")
+        action = _finite_array(action)
         action = np.clip(action, -1.0, 1.0)
         # Leverage cap: sum(|weights|) <= 2x
         abs_sum = np.abs(action).sum()
@@ -162,10 +187,11 @@ class TradingEnv(gym.Env):
             action = action * (MAX_LEVERAGE / abs_sum)
 
         prices = self._current_closes()
-        prev_equity = self._mark_to_market(prices)
+        prev_equity = _safe_float(self._mark_to_market(prices), self._last_equity)
         self._rebalance(action, prices)
-        equity = self._mark_to_market(prices)
-        step_return = (equity - prev_equity) / max(prev_equity, 1e-9)
+        equity = _safe_float(self._mark_to_market(prices), prev_equity)
+        step_return = (equity - prev_equity) / max(abs(prev_equity), 1e-9)
+        step_return = _safe_float(step_return, 0.0)
         self._returns.append(step_return)
         self._equity_curve.append(equity)
         self._last_equity = equity
@@ -205,8 +231,15 @@ class TradingEnv(gym.Env):
         calendar = self._calendar_features()  # (3)
         news_scores = self._news_score_features()  # (4)
         inventory = self._inventory_features()  # (5)
-        return np.concatenate(
-            [price_window, long_term, calendar, news_scores, inventory]
+        return np.clip(
+            np.nan_to_num(
+                np.concatenate([price_window, long_term, calendar, news_scores, inventory]).astype(np.float32),
+                nan=0.0,
+                posinf=OBS_CLIP,
+                neginf=-OBS_CLIP,
+            ),
+            -OBS_CLIP,
+            OBS_CLIP,
         ).astype(np.float32)
 
     def _price_window_features(self) -> np.ndarray:
@@ -226,13 +259,17 @@ class TradingEnv(gym.Env):
                 values = np.vstack([pad, values])
             else:
                 values = values[-self.lookback_bars :]
-            # Normalize volume and prices vs last close to keep PPO inputs scaled
-            last_close = values[-1, 3] if values[-1, 3] else 1.0
+            values = _finite_array(values)
+            last_close = _safe_float(values[-1, 3], 0.0)
+            if last_close <= 0:
+                last_close = 1.0
             values = values.copy()
-            values[:, :4] = values[:, :4] / max(last_close, 1e-9) - 1.0
-            vol = values[:, 4]
-            vol_den = np.nanmean(np.abs(vol)) or 1.0
-            values[:, 4] = vol / vol_den
+            values[:, :4] = values[:, :4] / last_close - 1.0
+            vol = np.abs(values[:, 4])
+            vol_den = _safe_float(np.nanmean(vol), 0.0)
+            if vol_den <= 0:
+                vol_den = 1.0
+            values[:, 4] = values[:, 4] / vol_den
             blocks.append(values.reshape(-1))
         return np.concatenate(blocks).astype(np.float32)
 
@@ -250,18 +287,18 @@ class TradingEnv(gym.Env):
                 ma_dist.append(0.0)
                 vol_pct.append(0.5)
                 continue
-            px = float(series.iloc[-1])
+            px = _safe_float(series.iloc[-1], 0.0)
             window_ma = min(len(series), 200)
-            ma = float(series.iloc[-window_ma:].mean())
+            ma = _safe_float(series.iloc[-window_ma:].mean(), 0.0)
             ma_dist.append((px - ma) / ma if ma else 0.0)
 
-            rets = series.pct_change().dropna()
+            rets = series.pct_change().replace([np.inf, -np.inf], np.nan).dropna()
             if len(rets) < 30:
                 vol_pct.append(0.5)
             else:
-                vol_30 = float(rets.iloc[-30:].std())
+                vol_30 = _safe_float(rets.iloc[-30:].std(), 0.0)
                 rolling = rets.rolling(30).std().dropna()
-                vol_pct.append(float((rolling <= vol_30).mean()) if len(rolling) else 0.5)
+                vol_pct.append(_safe_float((rolling <= vol_30).mean(), 0.5) if len(rolling) else 0.5)
 
         hk = CORE_TICKERS[:3]
         us = CORE_TICKERS[3:]
@@ -273,7 +310,8 @@ class TradingEnv(gym.Env):
                     if len(pair) < 30:
                         pair = closes[[h, u]].dropna()
                     if len(pair) >= 10:
-                        corrs.append(float(pair[h].pct_change().corr(pair[u].pct_change()) or 0.0))
+                        corr = pair[h].pct_change().corr(pair[u].pct_change())
+                        corrs.append(_safe_float(corr, 0.0))
                     else:
                         corrs.append(0.0)
                 else:
@@ -294,10 +332,10 @@ class TradingEnv(gym.Env):
     def _inventory_features(self) -> np.ndarray:
         """(5) Holdings as portfolio-weight ratios plus cash fraction."""
         prices = self._current_closes()
-        equity = max(self._mark_to_market(prices), 1e-9)
+        equity = max(_safe_float(self._mark_to_market(prices), self.initial_cash), 1e-9)
         notionals = self._holdings * prices
-        weights = notionals / equity
-        cash_frac = self._cash / equity
+        weights = _finite_array(notionals / equity)
+        cash_frac = _safe_float(self._cash / equity, 1.0)
         return np.concatenate([weights, np.asarray([cash_frac])]).astype(np.float32)
 
     # ------------------------------------------------------------------
@@ -313,46 +351,56 @@ class TradingEnv(gym.Env):
         dt = self._current_dt()
         snap = self.df[self.df["datetime"] == dt]
         prices = []
-        for ticker in CORE_TICKERS:
+        for i, ticker in enumerate(CORE_TICKERS):
             row = snap[snap["ticker"] == ticker]
             if row.empty:
                 hist = self.df[(self.df["ticker"] == ticker) & (self.df["datetime"] <= dt)]
-                prices.append(float(hist["close"].iloc[-1]) if not hist.empty else 0.0)
+                raw = float(hist["close"].iloc[-1]) if not hist.empty else self._last_good_prices[i]
             else:
-                prices.append(float(row["close"].iloc[-1]))
+                raw = float(row["close"].iloc[-1])
+            px = _safe_float(raw, self._last_good_prices[i])
+            if px <= 0:
+                px = float(self._last_good_prices[i]) if self._last_good_prices[i] > 0 else 1.0
+            prices.append(px)
+            self._last_good_prices[i] = px
         return np.asarray(prices, dtype=np.float64)
 
     def _mark_to_market(self, prices: np.ndarray) -> float:
-        return float(self._cash + np.dot(self._holdings, prices))
+        return _safe_float(self._cash + np.dot(self._holdings, _finite_array(prices)), self._last_equity)
 
     def _rebalance(self, target_weights: np.ndarray, prices: np.ndarray) -> None:
         equity = max(self._mark_to_market(prices), 1e-9)
-        target_notional = target_weights * equity
+        target_notional = _finite_array(target_weights) * equity
         safe_prices = np.where(prices > 0, prices, np.inf)
         target_shares = target_notional / safe_prices
         target_shares = np.where(np.isfinite(target_shares), target_shares, 0.0)
         delta = target_shares - self._holdings
-        trade_cash = float(np.dot(delta, prices))
+        trade_cash = _safe_float(np.dot(delta, prices), 0.0)
         self._cash -= trade_cash
         self._holdings = target_shares
-        if self._cash < 0:
-            # Scale back buys so cash never goes deeply negative in the stub.
-            logger.debug("Cash went negative (%.2f); clamping to 0 for this bar.", self._cash)
+        if not np.isfinite(self._cash) or self._cash < 0:
+            logger.debug("Cash invalid (%.2f); clamping to 0 for this bar.", self._cash)
             self._cash = 0.0
 
     def _sharpe_drawdown_reward(self) -> float:
         """Reward = rolling Sharpe − λ × max-drawdown penalty (PLAN.md §5)."""
-        rets = np.asarray(self._returns[-SHARPE_WINDOW :], dtype=np.float64)
+        rets = _finite_array(np.asarray(self._returns[-SHARPE_WINDOW :], dtype=np.float64))
         if len(rets) < 2:
             sharpe = 0.0
         else:
-            std = float(rets.std())
-            sharpe = float(rets.mean() / (std + 1e-9) * np.sqrt(TRADING_DAYS))
-        curve = np.asarray(self._equity_curve, dtype=np.float64)
+            std = _safe_float(rets.std(), 0.0)
+            sharpe = _safe_float(rets.mean() / (std + 1e-9) * np.sqrt(TRADING_DAYS), 0.0)
+
+        curve = _finite_array(np.asarray(self._equity_curve, dtype=np.float64), fill=self.initial_cash)
+        if len(curve) < 2:
+            return 0.0
         peak = np.maximum.accumulate(curve)
-        dd = (peak - curve) / np.maximum(peak, 1e-9)
-        max_dd = float(dd.max()) if len(dd) else 0.0
-        return sharpe - DRAWDOWN_LAMBDA * max_dd
+        denominator = np.maximum(np.abs(peak), 1e-6)
+        dd = (peak - curve) / denominator
+        dd = dd[np.isfinite(dd)]
+        max_dd = float(np.clip(dd.max(), 0.0, 1.0)) if len(dd) else 0.0
+        reward = sharpe - DRAWDOWN_LAMBDA * max_dd
+        return float(np.clip(_safe_float(reward, 0.0), -REWARD_CLIP, REWARD_CLIP))
 
 
 def _synthetic_panel(n_bars: int = 400, seed: int = 7) -> pd.DataFrame:
