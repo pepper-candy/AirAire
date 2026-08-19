@@ -271,7 +271,13 @@ class TradingEnv(gym.Env):
         self._returns = []
         self._equity_curve = [self.initial_cash]
         self._last_equity = self.initial_cash
-        self._last_good_prices = np.ones(N_CORE, dtype=np.float64)
+        # Re-seed from the start bar so a previous episode's prices cannot leak in.
+        if len(self._close_matrix):
+            seed_px = self._close_matrix[min(self._bar_index, len(self._close_matrix) - 1)]
+            seed_px = np.where(np.isfinite(seed_px) & (seed_px > 0), seed_px, 1.0)
+            self._last_good_prices = seed_px.astype(np.float64)
+        else:
+            self._last_good_prices = np.ones(N_CORE, dtype=np.float64)
         obs = self._get_obs()
         return obs, {"bar_index": self._bar_index, "datetime": self._current_dt()}
 
@@ -488,9 +494,12 @@ class TradingEnv(gym.Env):
         trade_cash = _safe_float(np.dot(delta, prices), 0.0)
         self._cash = float(np.clip(_safe_float(self._cash - trade_cash, 0.0), -MAX_EQUITY, MAX_EQUITY))
         self._holdings = target_shares
-        if not np.isfinite(self._cash) or self._cash < 0:
-            logger.debug("Cash invalid (%.2f); clamping to 0 for this bar.", self._cash)
-            self._cash = 0.0
+        # Negative cash is margin (allowed up to MAX_LEVERAGE). Zeroing it used to
+        # wipe the liability while keeping the shares — equity then doubled every
+        # max-leverage bar and evaluation reported billion-dollar books.
+        if not np.isfinite(self._cash):
+            logger.debug("Cash non-finite after rebalance; restoring previous mark.")
+            self._cash = float(np.clip(self._last_equity - float(np.dot(self._holdings, prices)), -MAX_EQUITY, MAX_EQUITY))
 
     def _sharpe_drawdown_reward(self) -> float:
         """Reward = rolling Sharpe − λ × max-drawdown penalty (PLAN.md §5)."""

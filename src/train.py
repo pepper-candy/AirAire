@@ -26,7 +26,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 import torch
 
 from src.data_loader import load_enhanced_data, load_processed, merge_price_news, panel_to_wide
-from src.trading_env import LOOKBACK_BARS, MAX_EQUITY, MIN_EQUITY, TRADING_DAYS, TradingEnv, news_obs_slice
+from src.trading_env import LOOKBACK_BARS, MAX_EQUITY, MIN_EQUITY, N_CORE, TradingEnv, news_obs_slice
 from src.utils import (
     CORE_TICKERS,
     ENHANCED_PARQUET,
@@ -43,8 +43,9 @@ logger = setup_logging("airaire.train")
 DEFAULT_EPOCHS = 10
 DEFAULT_WINDOW_DAYS = 30
 PPO_N_STEPS = 2048
-# 10-minute US cash session ≈ 39 bars/day (Phase 3 spec). Used only to annualize reported Sharpe.
-BARS_PER_DAY = 39
+# Clip reported eval metrics so a broken walk cannot dominate best-model selection.
+EVAL_RETURN_CLIP = (-1.0, 3.0)
+EVAL_SHARPE_CLIP = (-3.0, 5.0)
 
 
 @dataclass(frozen=True)
@@ -133,6 +134,21 @@ def make_vec_env(
     return DummyVecEnv([_factory])
 
 
+def resolve_device(device: str) -> str:
+    """Honor --device cuda/cpu, or pick CUDA when available (--device auto)."""
+    requested = (device or "auto").lower()
+    cuda_ok = torch.cuda.is_available()
+    if requested == "auto":
+        chosen = "cuda" if cuda_ok else "cpu"
+        logger.info("device=auto -> %s (torch.cuda.is_available=%s)", chosen, cuda_ok)
+        return chosen
+    if requested == "cuda" and not cuda_ok:
+        logger.warning("CUDA requested but torch.cuda.is_available() is False. Falling back to cpu.")
+        return "cpu"
+    logger.info("PPO device=%s  cuda_available=%s", requested, cuda_ok)
+    return requested
+
+
 def make_ppo(env: DummyVecEnv, seed: int, device: str = "cpu") -> PPO:
     # MlpPolicy on CUDA is slower and was the device that produced NaN loc on Colab.
     return PPO(
@@ -167,9 +183,22 @@ def evaluate_policy(
     window_days: int,
     news_df: pd.DataFrame | None = None,
 ) -> tuple[float, float, float, float]:
-    """Walk the window once, deterministically. Returns return, Sharpe, max DD, final equity."""
+    """Walk the window once, deterministically. Returns return, Sharpe, max DD, final equity.
+
+    Sharpe is the raw mean/std of bar returns inside this window — no
+    ``sqrt(252 * 39)`` annualization (that factor ~99× turned modest paths into
+    Sharpe 20). A fresh ``TradingEnv`` is built and ``reset()`` so training-env
+    cash/holdings cannot bleed into the metrics.
+    """
     env = TradingEnv(df=df, news_df=news_df, initial_cash=INITIAL_CASH, window_days=window_days)
     obs, _ = env.reset()
+    # Belt-and-suspenders: reset() already clears these; re-assert so eval never
+    # inherits a previous walk if Gym wrappers change.
+    env._cash = env.initial_cash
+    env._holdings = np.zeros(N_CORE, dtype=np.float64)
+    env._returns = []
+    env._equity_curve = [env.initial_cash]
+    env._last_equity = env.initial_cash
     if not np.all(np.isfinite(obs)):
         logger.warning("evaluate_policy: invalid initial observation. Returning flat metrics.")
         return 0.0, 0.0, 0.0, INITIAL_CASH
@@ -205,10 +234,12 @@ def evaluate_policy(
     cum_ret = (end_eq / start_eq) - 1.0
 
     rets = np.clip(np.nan_to_num(np.asarray(env._returns, dtype=np.float64), nan=0.0), -1.0, 1.0)
-    if len(rets) < 2 or not np.isfinite(rets.std()) or float(rets.std()) < 1e-12:
+    if len(rets) < 2 or not np.isfinite(rets.std()):
         sharpe = 0.0
     else:
-        sharpe = float(rets.mean() / (rets.std() + 1e-9) * np.sqrt(TRADING_DAYS * BARS_PER_DAY))
+        # Raw window Sharpe (no annualization). Tiny std → treat as flat, not inf.
+        std = float(rets.std())
+        sharpe = 0.0 if std < 1e-12 else float(rets.mean() / (std + 1e-9))
         if not np.isfinite(sharpe):
             sharpe = 0.0
 
@@ -216,6 +247,26 @@ def evaluate_policy(
     dd = (peak - curve) / np.maximum(np.abs(peak), 1e-6)
     dd = dd[np.isfinite(dd)]
     max_dd = float(np.clip(dd.max(), 0.0, 1.0)) if len(dd) else 0.0
+
+    if (
+        cum_ret < EVAL_RETURN_CLIP[0]
+        or cum_ret > EVAL_RETURN_CLIP[1]
+        or sharpe < EVAL_SHARPE_CLIP[0]
+        or sharpe > EVAL_SHARPE_CLIP[1]
+        or end_eq > start_eq * (1.0 + EVAL_RETURN_CLIP[1])
+        or end_eq < start_eq * (1.0 + EVAL_RETURN_CLIP[0])
+    ):
+        logger.warning(
+            "evaluate_policy: metrics out of range before clip  return=%.4f  sharpe=%.4f  "
+            "max_dd=%.4f  equity=%.2f  (healthy: return[-1,3] sharpe[-3,5] equity~0.9e6-1.5e6)",
+            cum_ret,
+            sharpe,
+            max_dd,
+            end_eq,
+        )
+    cum_ret = float(np.clip(cum_ret, EVAL_RETURN_CLIP[0], EVAL_RETURN_CLIP[1]))
+    sharpe = float(np.clip(sharpe, EVAL_SHARPE_CLIP[0], EVAL_SHARPE_CLIP[1]))
+    end_eq = float(start_eq * (1.0 + cum_ret))
     return cum_ret, sharpe, max_dd, end_eq
 
 
@@ -312,6 +363,7 @@ def train(
     no_news: bool = False,
     force_news_fetch: bool = False,
 ) -> list[WindowMetrics]:
+    device = resolve_device(device)
     use_news = not no_news
     if output is not None:
         output_dir = Path(output)
@@ -474,9 +526,23 @@ def train(
 
         if saved is not None:
             last_good_ckpt = saved
-            if np.isfinite(sharpe) and sharpe > best_sharpe:
+            hit_clip = (
+                np.isclose(sharpe, EVAL_SHARPE_CLIP[0])
+                or np.isclose(sharpe, EVAL_SHARPE_CLIP[1])
+                or np.isclose(cum_ret, EVAL_RETURN_CLIP[0])
+                or np.isclose(cum_ret, EVAL_RETURN_CLIP[1])
+            )
+            if hit_clip:
+                logger.warning(
+                    "Window %d hit eval clip bounds; not using this checkpoint for best_model.zip.",
+                    win.index,
+                )
+            elif np.isfinite(sharpe) and sharpe > best_sharpe:
                 best_sharpe = sharpe
                 best_ckpt = saved
+
+        if not test:
+            _save_log(metrics, output_dir / "training_log.csv")
 
         vec_env.close()
 
@@ -502,9 +568,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--seed", type=int, default=42)
     p.add_argument(
         "--device",
-        default="cpu",
+        default="auto",
         choices=("cpu", "cuda", "auto"),
-        help="PPO device. Default cpu (SB3 recommendation for MlpPolicy).",
+        help="PPO device. Default auto (cuda if available, else cpu).",
     )
     p.add_argument(
         "--resume",
