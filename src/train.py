@@ -11,6 +11,7 @@ import argparse
 import shutil
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -68,6 +69,11 @@ class WindowMetrics:
     max_drawdown: float
     final_equity: float
     news_coverage: float = 0.0
+    # Optional diagnostics (defaults keep older CSV rows loadable).
+    calmar: float = 0.0
+    approx_kl: float = float("nan")
+    entropy_loss: float = float("nan")
+    ppo_updates: int = 0
 
 
 def _sanitize_panel(df: pd.DataFrame) -> pd.DataFrame:
@@ -233,7 +239,16 @@ def evaluate_policy(
         end_eq = start_eq
     cum_ret = (end_eq / start_eq) - 1.0
 
-    rets = np.clip(np.nan_to_num(np.asarray(env._returns, dtype=np.float64), nan=0.0), -1.0, 1.0)
+    # Sharpe from the equity curve (the P&L path), not env._returns.
+    # 2026-08-19: step() marked to market at the same prices as the rebalance,
+    # so _returns were ~0 and every window logged Sharpe=0.0000. The curve
+    # already included the next bar's move — use that as the source of truth.
+    if len(curve) >= 3:
+        denom = np.maximum(np.abs(curve[:-1]), 1e-9)
+        rets = np.clip((curve[1:] - curve[:-1]) / denom, -1.0, 1.0)
+        rets = rets[np.isfinite(rets)]
+    else:
+        rets = np.asarray([], dtype=np.float64)
     if len(rets) < 2 or not np.isfinite(rets.std()):
         sharpe = 0.0
     else:
@@ -270,11 +285,75 @@ def evaluate_policy(
     return cum_ret, sharpe, max_dd, end_eq
 
 
+def calmar_ratio(cum_ret: float, max_dd: float) -> float:
+    """Return / max drawdown. Used as a Sharpe tie-break (and fallback when Sharpe≈0)."""
+    return float(cum_ret) / max(float(max_dd), 1e-6)
+
+
+def checkpoint_sort_key(cum_ret: float, sharpe: float, max_dd: float) -> tuple[float, float, float]:
+    """Higher tuple wins when choosing ``best_model.zip``.
+
+    The 2026-08-19 GPU run used ``sharpe > best_sharpe`` while Sharpe was always
+    0.0, so Window 1 (the first 0.0 > -inf) froze as the winner. Near-zero
+    Sharpe is treated as non-informative so Calmar (then raw return) decides.
+    """
+    s = float(sharpe) if np.isfinite(sharpe) else 0.0
+    sharpe_key = 0.0 if abs(s) < 1e-8 else s
+    return (sharpe_key, calmar_ratio(cum_ret, max_dd), float(cum_ret))
+
+
 def _save_log(rows: list[WindowMetrics], path: Path) -> None:
-    frame = pd.DataFrame([r.__dict__ for r in rows])
+    """Snapshot this run and append *new* rows to a cross-run history file.
+
+    DeepSeek's concat(existing, entire in-memory list) on every window would
+    duplicate w1, then w1+w2, … because the trainer already calls this after
+    each window *and* at the end with the full ``metrics`` list. We:
+
+    * overwrite ``path`` with the current-run snapshot (crash recovery)
+    * append only unseen ``run_id``+window+start+end keys to
+      ``training_log_history.csv`` so previous jobs are never wiped
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(path, index=False)
-    logger.info("Wrote training log -> %s", path)
+    new_df = pd.DataFrame([r.__dict__ for r in rows])
+    new_df.to_csv(path, index=False)
+
+    run_id = getattr(_save_log, "_run_id", None)
+    if not run_id:
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        _save_log._run_id = run_id  # type: ignore[attr-defined]
+
+    if new_df.empty:
+        logger.info("Wrote training log -> %s (rows=0)", path)
+        return
+
+    hist_df = new_df.copy()
+    hist_df.insert(0, "run_id", run_id)
+    history_path = path.with_name("training_log_history.csv")
+    key_cols = [c for c in ("run_id", "window", "start", "end") if c in hist_df.columns]
+    appended = 0
+    if history_path.exists():
+        existing = pd.read_csv(history_path)
+        if key_cols and all(c in existing.columns for c in key_cols):
+            existing_keys = set(zip(*(existing[c].astype(str) for c in key_cols)))
+            row_keys = list(zip(*(hist_df[c].astype(str) for c in key_cols)))
+            mask = [key not in existing_keys for key in row_keys]
+            to_append = hist_df.loc[mask]
+        else:
+            to_append = hist_df
+        if not to_append.empty:
+            pd.concat([existing, to_append], ignore_index=True).to_csv(history_path, index=False)
+            appended = len(to_append)
+    else:
+        hist_df.to_csv(history_path, index=False)
+        appended = len(hist_df)
+
+    logger.info(
+        "Wrote training log -> %s (snapshot rows=%d); history %s appended=%d",
+        path,
+        len(new_df),
+        history_path,
+        appended,
+    )
 
 
 def _news_coverage(df: pd.DataFrame) -> float:
@@ -364,6 +443,9 @@ def train(
     force_news_fetch: bool = False,
 ) -> list[WindowMetrics]:
     device = resolve_device(device)
+    # Fresh id so this job's rows append to training_log_history.csv without
+    # colliding with a previous run's window 1..N keys.
+    _save_log._run_id = datetime.now().strftime("%Y%m%d_%H%M%S")  # type: ignore[attr-defined]
     use_news = not no_news
     if output is not None:
         output_dir = Path(output)
@@ -447,6 +529,7 @@ def train(
     model: PPO | None = None
     metrics: list[WindowMetrics] = []
     best_sharpe = -np.inf
+    best_key: tuple[float, float, float] | None = None
     best_ckpt: Path | None = None
     last_good_ckpt: Path | None = None
     n_windows = len(windows)
@@ -501,6 +584,7 @@ def train(
             continue
 
         cum_ret, sharpe, max_dd, equity = evaluate_policy(model, win.df, window_days, window_news)
+        calmar = calmar_ratio(cum_ret, max_dd)
         row = WindowMetrics(
             window=win.index,
             start=str(win.start.date()),
@@ -512,14 +596,16 @@ def train(
             max_drawdown=max_dd,
             final_equity=equity,
             news_coverage=coverage,
+            calmar=calmar,
         )
         metrics.append(row)
         logger.info(
-            "Window %d metrics  return=%.4f  sharpe=%.4f  max_dd=%.4f  equity=%.2f  news_coverage=%.1f%%",
+            "Window %d metrics  return=%.4f  sharpe=%.4f  max_dd=%.4f  calmar=%.4f  equity=%.2f  news_coverage=%.1f%%",
             win.index,
             cum_ret,
             sharpe,
             max_dd,
+            calmar,
             equity,
             100.0 * coverage,
         )
@@ -537,9 +623,13 @@ def train(
                     "Window %d hit eval clip bounds; not using this checkpoint for best_model.zip.",
                     win.index,
                 )
-            elif np.isfinite(sharpe) and sharpe > best_sharpe:
-                best_sharpe = sharpe
-                best_ckpt = saved
+            elif np.isfinite(sharpe):
+                # Sharpe primary; Calmar then return as tie-break / Sharpe≈0 fallback.
+                key = checkpoint_sort_key(cum_ret, sharpe, max_dd)
+                if best_key is None or key > best_key:
+                    best_key = key
+                    best_sharpe = sharpe
+                    best_ckpt = saved
 
         if not test:
             _save_log(metrics, output_dir / "training_log.csv")
@@ -552,7 +642,13 @@ def train(
         if best_ckpt is not None and best_ckpt.exists():
             dest = output_dir / "best_model.zip"
             shutil.copy2(best_ckpt, dest)
-            logger.info("Best Sharpe=%.4f -> copied %s to %s", best_sharpe, best_ckpt.name, dest)
+            logger.info(
+                "Best checkpoint Sharpe=%.4f Calmar=%.4f -> copied %s to %s",
+                best_sharpe,
+                best_key[1] if best_key is not None else float("nan"),
+                best_ckpt.name,
+                dest,
+            )
     else:
         logger.info("--test complete. Checkpoints and training_log.csv were not written.")
 

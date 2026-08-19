@@ -118,6 +118,10 @@ class TradingEnv(gym.Env):
         self.df = self._prepare_panel(df)
         self.datetimes = self._unique_datetimes()
         self._close_matrix = self._build_close_matrix()
+        # Precompute OHLCV + long-term blocks once. Per-step pandas (isin / pivot_table)
+        # was the 30 FPS bottleneck — the GPU was idle waiting on these.
+        self._ohlcv_cube = self._build_ohlcv_cube()
+        self._long_term_mat = self._precompute_long_term()
         self._news_aligned = self._prepare_news(news_df)
         self._bar_index = 0
         self._cash = self.initial_cash
@@ -195,6 +199,78 @@ class TradingEnv(gym.Env):
                 if finite.any():
                     mat[finite, i] = vals[finite]
         return mat
+
+    def _build_ohlcv_cube(self) -> np.ndarray:
+        """datetime × ticker × OHLCV — sliced in ``_price_window_features`` with no pandas."""
+        n = len(self.datetimes)
+        cube = np.zeros((max(n, 1), N_CORE, len(OHLCV_FIELDS)), dtype=np.float64)
+        if n == 0 or self.df.empty:
+            return cube
+        cube[:, :, 3] = self._close_matrix
+        for f_i, field in enumerate(OHLCV_FIELDS):
+            if field == "close":
+                continue
+            wide = self.df.pivot_table(index="datetime", columns="ticker", values=field, aggfunc="last")
+            wide = wide.reindex(self.datetimes)
+            for j, ticker in enumerate(CORE_TICKERS):
+                if ticker not in wide.columns:
+                    continue
+                col = pd.to_numeric(wide[ticker], errors="coerce").ffill().bfill()
+                vals = col.to_numpy(dtype=np.float64)
+                if field == "volume":
+                    cube[:, j, f_i] = np.where(np.isfinite(vals), vals, 0.0)
+                else:
+                    vals = np.where(np.isfinite(vals) & (vals > 0), vals, np.nan)
+                    finite = np.isfinite(vals)
+                    if finite.any():
+                        cube[finite, j, f_i] = vals[finite]
+                    # missing OHLC: copy close so normalize does not divide by 0
+                    missing = ~finite
+                    if missing.any():
+                        cube[missing, j, f_i] = self._close_matrix[missing, j]
+        # any leftover zero OHLC → close
+        for f_i in range(4):
+            bad = ~(np.isfinite(cube[:, :, f_i]) & (cube[:, :, f_i] > 0))
+            cube[:, :, f_i] = np.where(bad, self._close_matrix, cube[:, :, f_i])
+        return cube
+
+    def _precompute_long_term(self) -> np.ndarray:
+        """MA distance, vol percentile, HK↔US corr for every bar (once per env)."""
+        n = len(self.datetimes)
+        if n == 0:
+            return np.zeros((1, _long_term_dim()), dtype=np.float32)
+        closes = pd.DataFrame(self._close_matrix, columns=CORE_TICKERS)
+        ma_block = np.zeros((n, N_CORE), dtype=np.float32)
+        vol_block = np.full((n, N_CORE), 0.5, dtype=np.float32)
+        for j, ticker in enumerate(CORE_TICKERS):
+            series = closes[ticker]
+            ma = series.rolling(200, min_periods=2).mean()
+            dist = (series - ma) / ma.replace(0.0, np.nan)
+            ma_block[:, j] = dist.fillna(0.0).to_numpy(dtype=np.float32)
+
+            rets = series.pct_change().replace([np.inf, -np.inf], np.nan)
+            roll = rets.rolling(30).std()
+            valid = roll.to_numpy(dtype=np.float64)
+            for i in range(n):
+                v = valid[i]
+                if not np.isfinite(v):
+                    continue
+                hist = valid[: i + 1]
+                hist = hist[np.isfinite(hist)]
+                if len(hist) == 0:
+                    continue
+                vol_block[i, j] = float(np.mean(hist <= v))
+
+        corr_block = np.zeros((n, 6), dtype=np.float32)
+        k = 0
+        for h in CORE_TICKERS[:3]:
+            for u in CORE_TICKERS[3:]:
+                rh = closes[h].pct_change().replace([np.inf, -np.inf], np.nan)
+                ru = closes[u].pct_change().replace([np.inf, -np.inf], np.nan)
+                corr = rh.expanding(min_periods=10).corr(ru)
+                corr_block[:, k] = np.nan_to_num(corr.to_numpy(dtype=np.float64), nan=0.0).astype(np.float32)
+                k += 1
+        return np.concatenate([ma_block, vol_block, corr_block], axis=1).astype(np.float32)
 
     def _prepare_news(self, news_df: pd.DataFrame | None) -> np.ndarray:
         """Align sentiment onto ``self.datetimes`` (forward-fill, no NaNs).
@@ -292,10 +368,20 @@ class TradingEnv(gym.Env):
         if abs_sum > MAX_LEVERAGE:
             action = action * (MAX_LEVERAGE / abs_sum)
 
-        prices = self._current_closes()
-        prev_equity = _safe_float(self._mark_to_market(prices), self._last_equity)
-        self._rebalance(action, prices)
-        equity = _safe_float(self._mark_to_market(prices), prev_equity)
+        # Mark at the *current* bar, rebalance, then advance and mark at the
+        # *next* bar. Same-price MTM after a commission-free rebalance made
+        # every step_return ≈ 0 (2026-08-19 GPU run: Sharpe always 0.0000),
+        # so PPO only saw the drawdown penalty. Equity-curve P&L was already
+        # valid because the next step opened at the new prices; _returns was not.
+        prices_current = self._current_closes()
+        prev_equity = _safe_float(self._mark_to_market(prices_current), self._last_equity)
+        self._rebalance(action, prices_current)
+
+        self._bar_index += 1
+        terminated = self._bar_index >= len(self.datetimes) - 1
+
+        prices_next = self._current_closes()
+        equity = _safe_float(self._mark_to_market(prices_next), prev_equity)
         step_return = (equity - prev_equity) / max(abs(prev_equity), 1e-9)
         step_return = _safe_float(step_return, 0.0)
         self._returns.append(step_return)
@@ -303,9 +389,6 @@ class TradingEnv(gym.Env):
         self._last_equity = equity
 
         reward = self._sharpe_drawdown_reward()
-
-        self._bar_index += 1
-        terminated = self._bar_index >= len(self.datetimes) - 1
         truncated = False
         obs = self._get_obs()
         info = {
@@ -350,80 +433,35 @@ class TradingEnv(gym.Env):
 
     def _price_window_features(self) -> np.ndarray:
         """(1) Last ``lookback_bars`` of OHLCV for the 5 core stocks, flattened."""
-        end = self._bar_index + 1
-        start = max(end - self.lookback_bars, 0)
-        window_ts = self.datetimes[start:end]
-        chunk = self.df[self.df["datetime"].isin(window_ts)]
-        blocks: list[np.ndarray] = []
-        for ticker in CORE_TICKERS:
-            sub = chunk[chunk["ticker"] == ticker].sort_values("datetime")
-            values = sub.loc[:, list(OHLCV_FIELDS)].to_numpy(dtype=np.float64)
-            if len(values) == 0:
-                values = np.zeros((self.lookback_bars, len(OHLCV_FIELDS)))
-            elif len(values) < self.lookback_bars:
-                pad = np.repeat(values[:1], self.lookback_bars - len(values), axis=0)
-                values = np.vstack([pad, values])
-            else:
-                values = values[-self.lookback_bars :]
-            values = _finite_array(values)
-            last_close = _safe_float(values[-1, 3], 0.0)
-            if last_close <= 0:
-                last_close = 1.0
-            values = values.copy()
-            values[:, :4] = values[:, :4] / last_close - 1.0
-            vol = np.abs(values[:, 4])
-            vol_den = _safe_float(np.nanmean(vol), 0.0)
-            if vol_den <= 0:
-                vol_den = 1.0
-            values[:, 4] = values[:, 4] / vol_den
-            blocks.append(values.reshape(-1))
-        return np.concatenate(blocks).astype(np.float32)
+        lookback = self.lookback_bars
+        end = min(self._bar_index + 1, len(self._ohlcv_cube))
+        start = end - lookback
+        if end <= 0:
+            window = np.zeros((lookback, N_CORE, len(OHLCV_FIELDS)), dtype=np.float64)
+        elif start < 0:
+            available = self._ohlcv_cube[:end]
+            pad = np.repeat(available[:1], lookback - end, axis=0)
+            window = np.concatenate([pad, available], axis=0)
+        else:
+            window = self._ohlcv_cube[start:end]
+        window = _finite_array(window)
+        last_close = window[-1, :, 3]
+        last_close = np.where(last_close > 0, last_close, 1.0)
+        ohlc = window[:, :, :4] / last_close.reshape(1, N_CORE, 1) - 1.0
+        vol = window[:, :, 4]
+        vol_den = np.nanmean(np.abs(vol), axis=0)
+        vol_den = np.where(np.isfinite(vol_den) & (vol_den > 0), vol_den, 1.0)
+        vol_norm = vol / vol_den.reshape(1, N_CORE)
+        feat = np.concatenate([ohlc, vol_norm[:, :, None]], axis=2)
+        # ticker-major flatten (same order as the old per-ticker loop)
+        return np.transpose(feat, (1, 0, 2)).reshape(-1).astype(np.float32)
 
     def _long_term_features(self) -> np.ndarray:
-        """(2) MA distance, 2-year vol percentile, 90-day HK-tech vs US-defensive corr."""
-        now = self._current_dt()
-        hist = self.df[self.df["datetime"] <= now]
-        closes = hist.pivot_table(index="datetime", columns="ticker", values="close", aggfunc="last").sort_index()
-
-        ma_dist = []
-        vol_pct = []
-        for ticker in CORE_TICKERS:
-            series = closes[ticker].dropna() if ticker in closes.columns else pd.Series(dtype=float)
-            if len(series) < 2:
-                ma_dist.append(0.0)
-                vol_pct.append(0.5)
-                continue
-            px = _safe_float(series.iloc[-1], 0.0)
-            window_ma = min(len(series), 200)
-            ma = _safe_float(series.iloc[-window_ma:].mean(), 0.0)
-            ma_dist.append((px - ma) / ma if ma else 0.0)
-
-            rets = series.pct_change().replace([np.inf, -np.inf], np.nan).dropna()
-            if len(rets) < 30:
-                vol_pct.append(0.5)
-            else:
-                vol_30 = _safe_float(rets.iloc[-30:].std(), 0.0)
-                rolling = rets.rolling(30).std().dropna()
-                vol_pct.append(_safe_float((rolling <= vol_30).mean(), 0.5) if len(rolling) else 0.5)
-
-        hk = CORE_TICKERS[:3]
-        us = CORE_TICKERS[3:]
-        corrs: list[float] = []
-        for h in hk:
-            for u in us:
-                if h in closes.columns and u in closes.columns:
-                    pair = closes[[h, u]].dropna().iloc[-90 * 390 :]  # ~90 sessions of 1-min if dense
-                    if len(pair) < 30:
-                        pair = closes[[h, u]].dropna()
-                    if len(pair) >= 10:
-                        corr = pair[h].pct_change().corr(pair[u].pct_change())
-                        corrs.append(_safe_float(corr, 0.0))
-                    else:
-                        corrs.append(0.0)
-                else:
-                    corrs.append(0.0)
-
-        return np.asarray(ma_dist + vol_pct + corrs, dtype=np.float32)
+        """(2) MA distance, vol percentile, HK-tech vs US-defensive corr (precomputed)."""
+        if self._long_term_mat is None or len(self._long_term_mat) == 0:
+            return np.zeros(_long_term_dim(), dtype=np.float32)
+        i = min(self._bar_index, len(self._long_term_mat) - 1)
+        return self._long_term_mat[i].astype(np.float32, copy=False)
 
     def _calendar_features(self) -> np.ndarray:
         """(3) Day-of-week, month, days until major holidays."""

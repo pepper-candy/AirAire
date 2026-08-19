@@ -1,0 +1,7 @@
+# Activate Virtual Environment
+venv_demo\Scripts\activate
+
+# Environment Setup
+pip install -r requirements_new.txt
+
+python -m src.train_gpu --output models/news_gpu --device cuda
