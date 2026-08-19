@@ -28,6 +28,7 @@ Checkpoints default to ``models/news_gpu_v2/``. SB3 2.x zips only.
 from __future__ import annotations
 
 import argparse
+import io
 import logging
 import shutil
 import subprocess
@@ -187,10 +188,25 @@ def _nvidia_smi_line() -> str | None:
 
 
 class _Tee:
-    """Duplicate writes to the console *and* a log file (SB3 uses print())."""
+    """Duplicate writes to the console *and* a log file (SB3 uses print()).
+
+    SB3 ``HumanOutputFormat`` (verbose=1 tables) does::
+
+        hasattr(sys.stdout, "write") and hasattr(sys.stdout, "close")
+
+    A Tee without ``close`` fails that check (2026-08-19 crash). Do **not**
+    drop the Tee in favour of a logging.FileHandler — SB3 does not send those
+    tables through ``logging``, so the file would miss the PPO rollout dump.
+    ``close`` is a no-op: we must not close the real stdout, and we close the
+    log file ourselves in ``_start_stdio_tee``'s restore().
+    """
 
     def __init__(self, *files: object) -> None:
         self.files = files
+        self.closed = False
+        self.encoding = "utf-8"
+        self.errors = "replace"
+        self.mode = "w"
 
     def write(self, obj: object) -> int:
         text = str(obj)
@@ -203,8 +219,25 @@ class _Tee:
         for f in self.files:
             f.flush()
 
+    def close(self) -> None:
+        # No-op. SB3 only checks that close exists; we must keep writing after
+        # HumanOutputFormat is constructed, and we must not close real stdout.
+        return
+
     def isatty(self) -> bool:
         return False
+
+    def readable(self) -> bool:
+        return False
+
+    def writable(self) -> bool:
+        return True
+
+    def seekable(self) -> bool:
+        return False
+
+    def fileno(self) -> int:
+        raise io.UnsupportedOperation("Tee has no fileno")
 
     def __getattr__(self, name: str):
         return getattr(self.files[0], name)
