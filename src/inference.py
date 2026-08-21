@@ -14,6 +14,9 @@ Live loop (Phase 4):
     Poll every 60s so we notice a new Futu 10-min close within a minute.
     Place SIMULATE orders only on a *new* completed bar, or when news jumps
     by ``NEWS_RETRADE_DELTA``. Same-bar 1-minute price drift does not rebalance.
+
+    ``--predict-now``: one live score (quotes + news), no orders, no ``state.pkl``
+    write. Safe while the continuous trader is already running.
 """
 
 from __future__ import annotations
@@ -518,6 +521,7 @@ def catch_up_env(
     *,
     now: datetime | None = None,
     persist_panel: bool = True,
+    persist_state: bool = True,
 ) -> tuple[TradingEnv, BotState, Any]:
     """Advance the env to the current bar WITHOUT placing any orders.
 
@@ -575,7 +579,8 @@ def catch_up_env(
         state.cash,
         state.equity,
     )
-    save_state(state)
+    if persist_state:
+        save_state(state)
     return env, state, panel
 
 
@@ -604,15 +609,25 @@ def run_loop(
     poll_seconds: int = 60,
     model_path: Path | None = None,
     skip_catch_up: bool = False,
+    predict_now: bool = False,
 ) -> None:
     # Log the trading brain before anything else so a wrong zip is obvious.
     resolved_model = resolve_inference_model_path(model_path)
     log_checkpoint_banner(resolved_model)
+    if predict_now:
+        once = True
+        logger.info(
+            "PREDICT NOW — one cycle, live quotes + news, no SIMULATE orders, state.pkl not written. "
+            "Safe to run while run_trader.bat is already up."
+        )
+    persist_state = not predict_now and not dry_run
 
     # §8: load state FIRST, before any order
     state = load_state()
     news = NewsPoller()
-    broker = FutuPaperBroker(dry_run=dry_run)
+    # --dry-run alone skips OpenD. --predict-now still connects for live quotes;
+    # orders are never sent (see the predict_now branch below).
+    broker = FutuPaperBroker(dry_run=dry_run and not predict_now)
     panel = None
     try:
         if ENHANCED_PARQUET.exists():
@@ -642,16 +657,28 @@ def run_loop(
             env.set_news_scores(state.news_scores)
             logger.warning("Catch-up skipped (--skip-catch-up). Env sought to now without Futu history.")
         else:
-            env, state, panel = catch_up_env(env, state, broker, panel)
+            env, state, panel = catch_up_env(
+                env,
+                state,
+                broker,
+                panel,
+                persist_panel=persist_state,
+                persist_state=persist_state,
+            )
 
         while not _shutdown:
             if not any_core_market_open():
-                wait = min(seconds_until_next_open(), 300)
-                logger.info("Both HK and US cash sessions closed. HOLD. Sleeping %ss.", wait)
-                if once:
-                    break
-                time.sleep(wait)
-                continue
+                if predict_now:
+                    logger.info(
+                        "Both HK and US cash sessions closed. Predict-now still scores the last completed bar (no orders)."
+                    )
+                else:
+                    wait = min(seconds_until_next_open(), 300)
+                    logger.info("Both HK and US cash sessions closed. HOLD. Sleeping %ss.", wait)
+                    if once:
+                        break
+                    time.sleep(wait)
+                    continue
 
             # Keep the observation window on the latest completed 10-min bar.
             if not skip_catch_up:
@@ -662,7 +689,12 @@ def run_loop(
                     now_naive = pd.Timestamp(_hk_now().replace(tzinfo=None))
                     if pd.notna(last) and (now_naive - last) >= pd.Timedelta(minutes=10):
                         env, state, panel = catch_up_env(
-                            env, state, broker, panel, persist_panel=False
+                            env,
+                            state,
+                            broker,
+                            panel,
+                            persist_panel=False,
+                            persist_state=persist_state,
                         )
                     else:
                         env.seek_to_datetime(_hk_now())
@@ -685,8 +717,10 @@ def run_loop(
             bar_id = str(env._current_dt())
             new_bar = bar_id != state.last_order_bar
             news_jump = _news_jumped(news_prev, news_now)
-            allow_orders = new_bar or news_jump
-            if not allow_orders:
+            allow_orders = (not predict_now) and (new_bar or news_jump)
+            if predict_now:
+                logger.info("Predict-now bar=%s (preview only).", bar_id)
+            elif not allow_orders:
                 logger.info(
                     "Same 10-min bar (%s) and news unchanged — skip orders this 60s cycle (no 1-min price chase).",
                     bar_id,
@@ -715,13 +749,17 @@ def run_loop(
                 target_shares = (action_i * equity) / px
                 delta = round_to_lot(ticker, target_shares - current)
                 reason = explain_action(ticker, action_i, delta, news_now.get(ticker, 0.0), news_prev.get(ticker, 0.0), corr_hint)
-                logger.info("%s%s", "" if allow_orders else "[preview, no order] ", reason)
+                prefix = "[predict-now] " if predict_now else ("" if allow_orders else "[preview, no order] ")
+                logger.info("%s%s", prefix, reason)
                 state.last_reason = reason
                 state.last_action[ticker] = action_i
-                if not allow_orders or delta == 0:
+                if predict_now or not allow_orders or delta == 0:
                     continue
                 is_buy = delta > 0
                 ok = broker.place_order(ticker, abs(delta), px, is_buy=is_buy)
+                if dry_run:
+                    logger.info("[DRY-RUN] would %s %s qty=%s — book unchanged.", "BUY" if is_buy else "SELL", ticker, abs(delta))
+                    continue
                 if ok:
                     state.holdings[ticker] = current + delta
                     state.cash -= delta * px
@@ -733,26 +771,48 @@ def run_loop(
             state.equity = state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS)
             state.last_bar_datetime = str(env._current_dt())
             env.restore_portfolio(state.cash, state.holdings)
-            if traded or allow_orders:
+            if persist_state and (traded or allow_orders):
                 save_state(state)
             else:
                 logger.info("No fills this cycle. Equity≈%.2f cash=%.2f", state.equity, state.cash)
 
+            if predict_now:
+                logger.info("============================================================")
+                logger.info("PREDICT NOW summary  bar=%s  equity≈%.2f  cash=%.2f", state.last_bar_datetime, state.equity, state.cash)
+                for ticker in CORE_TICKERS:
+                    logger.info(
+                        "  %s  action=%+.3f  holdings=%.4f  news=%.3f  %s",
+                        ticker,
+                        float(state.last_action.get(ticker, 0.0)),
+                        float(state.holdings.get(ticker, 0.0)),
+                        float(news_now.get(ticker, 0.0)),
+                        "OPEN" if is_ticker_market_open(ticker) else "CLOSED",
+                    )
+                logger.info("============================================================")
+
             if once:
-                # Persist even a hold cycle so a restart sees the latest news/action snapshot.
-                save_state(state)
+                if persist_state:
+                    save_state(state)
                 break
             time.sleep(max(poll_seconds, 5))
     finally:
-        save_state(state)
+        if persist_state:
+            save_state(state)
+            logger.info("Shutdown complete. state.pkl is current.")
+        else:
+            logger.info("Predict-now complete. state.pkl was not written.")
         broker.close()
-        logger.info("Shutdown complete. state.pkl is current.")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="AirAire paper trader")
-    p.add_argument("--once", action="store_true", help="Run a single inference cycle then exit.")
-    p.add_argument("--dry-run", action="store_true", help="Skip Futu OpenD orders.")
+    p.add_argument("--once", action="store_true", help="Run a single inference cycle then exit (writes state.pkl; do not use while the trader is already running).")
+    p.add_argument("--dry-run", action="store_true", help="Test only: skip OpenD and do not send Futu orders. Do not use on the live trader.")
+    p.add_argument(
+        "--predict-now",
+        action="store_true",
+        help="One live predict cycle: quotes + news, no orders, do not write state.pkl. Safe while the trader is running.",
+    )
     p.add_argument("--poll-seconds", type=int, default=60, help="Seconds between cycles while a market is open.")
     p.add_argument(
         "--model",
@@ -780,5 +840,6 @@ if __name__ == "__main__":
         poll_seconds=args.poll_seconds,
         model_path=args.model,
         skip_catch_up=args.skip_catch_up,
+        predict_now=args.predict_now,
     )
     sys.exit(0)

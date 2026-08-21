@@ -20,11 +20,11 @@ If any other file in `guide/` disagrees with this page, **this page wins**. Do n
 | ---------------------------------------------------------------------- | ------------------------------------------------------- |
 | Laptop repo                                                            | `C:\Users\mongk\Desktop\airaire`                        |
 | GPU VM repo (same tree)                                                | `C:\Users\klmong\Desktop\airaire`                       |
-| VM desktop (the three `.bat` files live **here**, not inside the repo) | `C:\Users\klmong\Desktop`                               |
+| VM desktop (the `.bat` files live **here**, not inside the repo) | `C:\Users\klmong\Desktop` |
 | Futu OpenD on the VM                                                   | `C:\Users\klmong\Desktop\Futu_OpenD_10.10.7008_Windows` |
 
 
-Copy `run_trader.bat`, `run_finetune.bat`, and `test_inference.bat` onto the VM desktop after every pull if those files changed.
+Copy `run_trader.bat`, `run_finetune.bat`, `test_inference.bat`, and `predict_now.bat` onto the VM desktop after every pull if those files changed.
 
 ---
 
@@ -32,7 +32,7 @@ Copy `run_trader.bat`, `run_finetune.bat`, and `test_inference.bat` onto the VM 
 
 ## 0. First blink (do this in order)
 
-1. Pull this repo onto the GPU VM. Copy the three `.bat` files to the VM desktop.
+1. Pull this repo onto the GPU VM. Copy the four `.bat` files to the VM desktop.
 2. Confirm `.env` has `ALPHAVANTAGE_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, Futu host/port if not default.
 3. Confirm goldens exist: `models/news_gpu_v2/best_model.zip`, `checkpoint_2026-08-12.zip`, `checkpoint_2026-08-18.zip`.
 4. Double-click `test_inference.bat`. The banner must show `models/news_gpu_v2/best_model.zip`. Dry-run places **no** SIMULATE orders.
@@ -248,11 +248,12 @@ They always:
 - start `C:\Users\klmong\Desktop\Futu_OpenD_10.10.7008_Windows\FutuOpenD.exe` (trader and fine-tune)
 
 
-| File                 | Command                                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
-| `run_trader.bat`     | `python -m src.inference --poll-seconds 60`                                                       |
-| `run_finetune.bat`   | OpenD + Alpha Vantage 30-day news, then `python -m src.finetune_latest --windows 1 --device cuda` |
-| `test_inference.bat` | `python -m src.inference --dry-run --once` (no OpenD, no orders)                                  |
+| File | Command |
+|---|---|
+| `run_trader.bat` | `python -m src.inference --poll-seconds 60` |
+| `run_finetune.bat` | OpenD + Alpha Vantage 30-day news, then `python -m src.finetune_latest --windows 1 --device cuda` |
+| `test_inference.bat` | `python -m src.inference --dry-run --once` — smoke test only. No OpenD, no orders. **Do not** put `--dry-run` on `run_trader.bat`. |
+| `predict_now.bat` | `python -m src.inference --predict-now` — one live **predict**, no trade. Quotes + news, no Futu order, no `state.pkl` write. Safe while the trader is running. |
 
 
 Needs `venv_gpu` and `.env`.
@@ -261,7 +262,26 @@ Cadence (HK):
 
 1. `run_trader.bat` before 09:30, or any time (catch-up will sync).
 2. After US cash close, or overnight: `run_finetune.bat`. Promote only if you want that zip live, then restart the trader.
-3. After a code pull: `test_inference.bat`, then re-copy bats to the desktop if they changed.
+3. After a code pull: `test_inference.bat` (trader **stopped**), then re-copy bats to the desktop if they changed.
+4. Anytime curiosity: `predict_now.bat` even if the trader is already looping. Look for `[predict-now]` and the summary. No trade.
+
+---
+
+## 6b. There is no live dashboard
+
+`guide/PLAN.md` listed a Streamlit app (`dashboard/streamlit_app.py`). **It was never built.** There is no web page that streams news or positions.
+
+What you have instead:
+
+| Place | What you see |
+|---|---|
+| Trader / predict terminal | Live quotes, news scores, `[predict-now]` or order reasons |
+| Telegram | Fill alerts (when the trader actually sends a SIMULATE order); Promote/Keep after fine-tune |
+| Futu OpenD (SIMULATE account) | Paper positions and fills on Futu’s own UI |
+| `state.pkl` | Book the bot believes (cash, holdings, last news, last bar) |
+| `logs/` | Fine-tune / train text logs |
+
+Live news exists in the **process** (Alpha Vantage → `NewsPoller` → env `news_score`). It is not pushed to a dashboard. You read it in the console (and Telegram only after a real fill).
 
 ---
 
@@ -283,7 +303,7 @@ We will not: trade outside the five names, fire in lunch, use Window-90 weights,
 
 ## 8. Operator checklist
 
-- [ ] Three `.bat` files on the **VM desktop**, not only in the repo
+- [ ] Four `.bat` files on the **VM desktop** (`run_trader`, `run_finetune`, `test_inference`, `predict_now`)
 - [ ] OpenD up before trader / fine-tune
 - [ ] `.env`: Alpha Vantage + Telegram
 - [ ] Banner: `models/news_gpu_v2/best_model.zip` exists
