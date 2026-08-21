@@ -1,7 +1,11 @@
 # Activate Virtual Environment
-venv_demo\Scripts\activate
+venv_gpu\Scripts\activate
 
 # Environment Setup
 pip install -r requirements_new.txt
 
-python -m src.train_gpu --output models/news_gpu --device cuda
+python -m src.train_gpu_v2 --output models/news_gpu_v2 --device cuda --resume 113
+
+# Using FutuOpenD Terminal
+FutuOpenD.exe -lang=en
+python -m guide_and_test.paper-trade-test

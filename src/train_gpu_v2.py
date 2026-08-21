@@ -20,7 +20,8 @@ Reviewed vs DeepSeek's TRAINING-OPTIMIZATION.md
       plus an append-only history file.
     * Extra (from TRAINING-RESULTS, not DeepSeek): ``ent_coef``, ``target_kl``,
       Calmar tie-break for ``best_model.zip``, reload last-good on collapse,
-      Tee stdio *and* retarget logging.StreamHandler (SB3 prints + logger).
+      and a ``logs/train_*.txt`` capture that does **not** replace sys.stdout
+      (SB3 2.0 ``HumanOutputFormat`` requires a real ``TextIOBase``).
 
 Checkpoints default to ``models/news_gpu_v2/``. SB3 2.x zips only.
 """
@@ -28,7 +29,6 @@ Checkpoints default to ``models/news_gpu_v2/``. SB3 2.x zips only.
 from __future__ import annotations
 
 import argparse
-import io
 import logging
 import shutil
 import subprocess
@@ -37,12 +37,14 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from multiprocessing import freeze_support
 from pathlib import Path
+from typing import TextIO
 
 import numpy as np
 import pandas as pd
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import HumanOutputFormat, Logger as SB3Logger
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
 
@@ -187,103 +189,52 @@ def _nvidia_smi_line() -> str | None:
         return None
 
 
-class _Tee:
-    """Duplicate writes to the console *and* a log file (SB3 uses print()).
+def _start_run_log(log_path: Path) -> tuple[object, TextIO]:
+    """Write airaire logging to ``log_path`` without replacing sys.stdout.
 
-    SB3 ``HumanOutputFormat`` (verbose=1 tables) does::
-
-        hasattr(sys.stdout, "write") and hasattr(sys.stdout, "close")
-
-    A Tee without ``close`` fails that check (2026-08-19 crash). Do **not**
-    drop the Tee in favour of a logging.FileHandler — SB3 does not send those
-    tables through ``logging``, so the file would miss the PPO rollout dump.
-    ``close`` is a no-op: we must not close the real stdout, and we close the
-    log file ourselves in ``_start_stdio_tee``'s restore().
+    SB3 2.0 ``HumanOutputFormat`` does ``isinstance(sys.stdout, TextIOBase)``.
+    A custom Tee fails that check even with write/close (2026-08-19 crash).
+    PPO tables are mirrored onto this same real file in ``_bind_sb3_logger``.
     """
-
-    def __init__(self, *files: object) -> None:
-        self.files = files
-        self.closed = False
-        self.encoding = "utf-8"
-        self.errors = "replace"
-        self.mode = "w"
-
-    def write(self, obj: object) -> int:
-        text = str(obj)
-        for f in self.files:
-            f.write(text)
-            f.flush()
-        return len(text)
-
-    def flush(self) -> None:
-        for f in self.files:
-            f.flush()
-
-    def close(self) -> None:
-        # No-op. SB3 only checks that close exists; we must keep writing after
-        # HumanOutputFormat is constructed, and we must not close real stdout.
-        return
-
-    def isatty(self) -> bool:
-        return False
-
-    def readable(self) -> bool:
-        return False
-
-    def writable(self) -> bool:
-        return True
-
-    def seekable(self) -> bool:
-        return False
-
-    def fileno(self) -> int:
-        raise io.UnsupportedOperation("Tee has no fileno")
-
-    def __getattr__(self, name: str):
-        return getattr(self.files[0], name)
-
-
-def _iter_stream_handlers() -> list[logging.StreamHandler]:
-    """StreamHandlers hold the stream captured at construction — replacing
-    sys.stderr later does not redirect them. FileHandler is a StreamHandler
-    subclass, so skip those."""
-    found: list[logging.StreamHandler] = []
-    seen: set[int] = set()
-    loggers = [logging.getLogger()]
-    loggers.extend(logging.getLogger(name) for name in logging.root.manager.loggerDict)
-    for log in loggers:
-        for handler in log.handlers:
-            hid = id(handler)
-            if hid in seen:
-                continue
-            seen.add(hid)
-            if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
-                found.append(handler)
-    return found
-
-
-def _start_stdio_tee(log_path: Path):
-    """Mirror stdout/stderr + logging to ``log_path``. Returns a restore() callback."""
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = open(log_path, "w", encoding="utf-8")
-    old_out, old_err = sys.stdout, sys.stderr
-    tee_out = _Tee(old_out, log_file)
-    tee_err = _Tee(old_err, log_file)
-    sys.stdout = tee_out
-    sys.stderr = tee_err
-    old_handler_streams = []
-    for handler in _iter_stream_handlers():
-        old_handler_streams.append((handler, handler.stream))
-        handler.stream = tee_err
+    handler = logging.StreamHandler(log_file)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)-8s | %(name)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    )
+    attached: list[logging.Logger] = []
+    names = set(logging.root.manager.loggerDict)
+    names.update({"airaire", "airaire.train_gpu_v2", "airaire.train", "airaire.trading_env"})
+    for name in names:
+        if not str(name).startswith("airaire"):
+            continue
+        log = logging.getLogger(str(name))
+        log.addHandler(handler)
+        attached.append(log)
 
     def restore() -> None:
-        sys.stdout = old_out
-        sys.stderr = old_err
-        for handler, stream in old_handler_streams:
-            handler.stream = stream
+        for log in attached:
+            log.removeHandler(handler)
+        handler.close()
         log_file.close()
 
-    return restore
+    return restore, log_file
+
+
+def _bind_sb3_logger(model: PPO, log_file: TextIO) -> None:
+    """Dump PPO verbose tables to the console *and* the run log file.
+
+    ``set_logger`` sets ``_custom_logger=True`` so ``learn()`` will not call
+    ``configure_logger`` → ``HumanOutputFormat(sys.stdout)`` on a fake stream.
+    Both targets are real ``TextIOBase`` objects (console + open file).
+    """
+    formats = [HumanOutputFormat(log_file)]
+    try:
+        formats.insert(0, HumanOutputFormat(sys.stdout))
+    except ValueError:
+        # Console is not a TextIOBase (rare). File capture still works.
+        logger.warning("sys.stdout is not a TextIOBase; PPO tables go to the log file only.")
+    model.set_logger(SB3Logger(folder=None, output_formats=formats))
 
 
 def _ppo_train_stats(model: PPO) -> dict[str, float]:
@@ -515,6 +466,7 @@ def _learn_window(
     steps: int,
     ckpt_to_load: Path | None,
     last_good_ckpt: Path | None,
+    log_file: TextIO,
 ) -> tuple[PPO, VecEnv, GpuPpoConfig]:
     """Create env + PPO and ``learn()``. On CUDA OOM, downgrade and retry."""
     gpu_cb = GpuMonitorCallback(log_every=1)
@@ -534,6 +486,7 @@ def _learn_window(
                 else:
                     model.set_env(vec_env)
             log_gpu_memory(f"window_{win.index}_before_learn")
+            _bind_sb3_logger(model, log_file)
             # Sequential windows share one timestep clock — never reset to 0.
             model.learn(
                 total_timesteps=steps,
@@ -610,13 +563,13 @@ def train(
     no_news: bool = False,
     force_news_fetch: bool = False,
 ) -> list[WindowMetrics]:
-    # Tee stdout/stderr (and logging StreamHandlers) into logs/train_*.txt so
-    # SB3's print() tables survive after the terminal is closed. Restore on exit
-    # so ``train()`` can be called twice from tests without leaking the file.
+    # Do not replace sys.stdout. SB3 2.0 requires a real TextIOBase; a custom
+    # Tee crashed HumanOutputFormat. airaire logs + PPO tables still go to
+    # logs/train_*.txt via a real file object.
     log_dir = _ROOT / "logs"
     log_dir.mkdir(exist_ok=True)
     log_filename = log_dir / f"train_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-    restore_stdio = _start_stdio_tee(log_filename)
+    restore_log, log_file = _start_run_log(log_filename)
     try:
         logger.info("Terminal output is also written to %s", log_filename)
         return _train_impl(
@@ -630,9 +583,10 @@ def train(
             init_checkpoint=init_checkpoint,
             no_news=no_news,
             force_news_fetch=force_news_fetch,
+            log_file=log_file,
         )
     finally:
-        restore_stdio()
+        restore_log()
 
 
 def _train_impl(
@@ -647,6 +601,7 @@ def _train_impl(
     init_checkpoint: Path | None,
     no_news: bool,
     force_news_fetch: bool,
+    log_file: TextIO,
 ) -> list[WindowMetrics]:
     device = resolve_device(device)
     _configure_cuda()
@@ -789,6 +744,7 @@ def _train_impl(
             steps=steps,
             ckpt_to_load=ckpt_to_load if model is None else None,
             last_good_ckpt=last_good_ckpt,
+            log_file=log_file,
         )
 
         saved: Path | None = None
