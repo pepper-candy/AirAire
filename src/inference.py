@@ -4,6 +4,11 @@ Resume contract (PLAN.md §8):
     1. Load ``state.pkl`` *before* any order.
     2. After every trade, persist holdings / cash / last action.
     3. On shutdown, flush state again.
+
+Startup catch-up (Phase 4):
+    If the operator logs in mid-session (e.g. 12:45), fetch missing 10-min bars
+    from Futu, jump ``TradingEnv._bar_index`` to the latest completed bar, and
+    sync ``state.pkl`` — no orders are placed during catch-up.
 """
 
 from __future__ import annotations
@@ -26,7 +31,13 @@ if str(_ROOT) not in sys.path:
 import numpy as np
 from dotenv import load_dotenv
 
-from src.data_loader import load_processed
+from src.data_loader import (
+    default_futu_fetch_start,
+    fetch_futu_history,
+    load_processed,
+    overlay_live_ohlcv,
+    persist_enhanced_panel,
+)
 from src.news_loader import latest_ticker_score
 from src.trading_env import TradingEnv
 from src.utils import (
@@ -35,10 +46,12 @@ from src.utils import (
     ENHANCED_PARQUET,
     FUTU_HOST,
     FUTU_PORT,
+    HK_TZ,
     INITIAL_CASH,
+    INFERENCE_MODEL_PATH,
     LOT_SIZES,
+    NEWS_GPU_V2_MODELS_DIR,
     NEWS_MIN_INTERVAL_SECONDS,
-    NEWS_MODELS_DIR,
     STATE_PKL,
     TICKER_NAMES,
     RateLimiter,
@@ -69,6 +82,7 @@ class BotState:
     equity: float = INITIAL_CASH
     news_scores: dict[str, float] = field(default_factory=lambda: {t: 0.0 for t in CORE_TICKERS})
     updated_at: str = ""
+    last_bar_datetime: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -91,6 +105,7 @@ class BotState:
             equity=float(raw.get("equity", raw.get("cash", INITIAL_CASH))),
             news_scores=news_scores,
             updated_at=str(raw.get("updated_at", "")),
+            last_bar_datetime=str(raw.get("last_bar_datetime", "")),
         )
 
 
@@ -104,15 +119,31 @@ def load_state(path: Path = STATE_PKL) -> BotState:
     with path.open("rb") as fh:
         raw = pickle.load(fh)
     if isinstance(raw, BotState):
-        state = raw
+        # Re-hydrate through from_dict so older pickles missing new fields still load.
+        payload = {}
+        for key in (
+            "holdings",
+            "cash",
+            "last_action",
+            "last_reason",
+            "realized_pnl",
+            "equity",
+            "news_scores",
+            "updated_at",
+            "last_bar_datetime",
+        ):
+            if hasattr(raw, key):
+                payload[key] = getattr(raw, key)
+        state = BotState.from_dict(payload)
     elif isinstance(raw, dict):
         state = BotState.from_dict(raw)
     else:
         logger.warning("Unrecognized state.pkl payload (%s); using defaults.", type(raw))
         state = BotState()
     logger.info(
-        "Loaded state.pkl updated_at=%s cash=%.2f holdings=%s last_action=%s pnl=%.2f",
+        "Loaded state.pkl updated_at=%s last_bar=%s cash=%.2f holdings=%s last_action=%s pnl=%.2f",
         state.updated_at,
+        state.last_bar_datetime,
         state.cash,
         state.holdings,
         state.last_action,
@@ -282,6 +313,28 @@ class FutuPaperBroker:
             prices[str(row["code"])] = float(row["last_price"])
         return prices
 
+    def history_klines(
+        self,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        tickers: list[str] | None = None,
+    ):
+        """10-min OHLCV for catch-up. Empty frame when dry-run / OpenD is down."""
+        import pandas as pd
+
+        if self.dry_run:
+            logger.warning("Futu history kline fetch skipped (dry-run / no OpenD).")
+            return pd.DataFrame(columns=["datetime", "ticker", "open", "high", "low", "close", "volume"])
+        return fetch_futu_history(
+            tickers=tickers or CORE_TICKERS,
+            start=start,
+            end=end,
+            quote_ctx=self._quote,
+            limiter=futu_limiter,
+            host=self.host,
+            port=self.port,
+        )
+
     def accinfo(self, ticker: str) -> dict[str, float]:
         if self.dry_run or self._trade_ctx(ticker) is None:
             return {}
@@ -374,10 +427,46 @@ def reconcile_with_futu(state: BotState, broker: FutuPaperBroker) -> BotState:
     return state
 
 
+def resolve_inference_model_path(explicit: Path | None = None) -> Path:
+    """Paper-trading brain: ``models/news_gpu_v2/best_model.zip`` (Window 113 / Calmar 2.05)."""
+    if explicit is not None:
+        return Path(explicit)
+    if INFERENCE_MODEL_PATH.exists():
+        return INFERENCE_MODEL_PATH
+    golden = NEWS_GPU_V2_MODELS_DIR / "checkpoint_2026-08-12.zip"
+    if golden.exists():
+        logger.warning(
+            "%s is missing; falling back to %s (trading golden, Calmar 2.05).",
+            INFERENCE_MODEL_PATH,
+            golden,
+        )
+        return golden
+    if BEST_MODEL_PATH.exists():
+        logger.warning(
+            "news_gpu_v2 best_model.zip is missing; falling back to legacy %s",
+            BEST_MODEL_PATH,
+        )
+        return BEST_MODEL_PATH
+    return INFERENCE_MODEL_PATH
+
+
+def log_checkpoint_banner(model_path: Path) -> None:
+    """First thing the operator should see: which zip the live policy is."""
+    resolved = model_path.resolve()
+    exists = model_path.exists()
+    size = ""
+    if exists:
+        size = f"{model_path.stat().st_size / (1024 * 1024):.2f} MB"
+    logger.info("============================================================")
+    logger.info("AirAire inference — model checkpoint")
+    logger.info("  path   : %s", resolved)
+    logger.info("  exists : %s%s", exists, f"  ({size})" if size else "")
+    logger.info("  role   : paper trading (models/news_gpu_v2/best_model.zip)")
+    logger.info("============================================================")
+
+
 def load_policy(model_path: Path | None = None):
-    if model_path is None:
-        news_best = NEWS_MODELS_DIR / "best_model.zip"
-        model_path = news_best if news_best.exists() else BEST_MODEL_PATH
+    model_path = resolve_inference_model_path(model_path)
     if not model_path.exists():
         logger.warning("No trained model at %s — policy will HOLD (action=0).", model_path)
         return None
@@ -385,11 +474,88 @@ def load_policy(model_path: Path | None = None):
         from stable_baselines3 import PPO
 
         model = PPO.load(str(model_path))
-        logger.info("Loaded PPO policy from %s", model_path)
+        logger.info("Loaded PPO policy from %s", model_path.resolve())
         return model
     except Exception as exc:  # noqa: BLE001
         logger.error("Failed to load model %s: %s", model_path, exc)
         return None
+
+
+def _hk_now(now: datetime | None = None) -> datetime:
+    if now is None:
+        return datetime.now(tz=HK_TZ)
+    if now.tzinfo is None:
+        return now.replace(tzinfo=HK_TZ)
+    return now.astimezone(HK_TZ)
+
+
+def catch_up_env(
+    env: TradingEnv,
+    state: BotState,
+    broker: FutuPaperBroker,
+    panel,
+    *,
+    now: datetime | None = None,
+    persist_panel: bool = True,
+) -> tuple[TradingEnv, BotState, Any]:
+    """Advance the env to the current bar WITHOUT placing any orders.
+
+    Startup example: operator logs in at 12:45 after missing the morning
+    session. We pull the missing 10-min bars from Futu, rebuild the price
+    cubes, jump ``_bar_index`` to the latest completed bar, restore the
+    ``state.pkl`` book, and persist ``updated_at`` / ``last_bar_datetime``.
+    """
+    import pandas as pd
+
+    now_hk = _hk_now(now)
+    before_dt = env._current_dt() if len(getattr(env, "datetimes", [])) else None
+    live = pd.DataFrame()
+    try:
+        start = default_futu_fetch_start(panel, now=now_hk)
+        live = broker.history_klines(start=start.to_pydatetime(), end=now_hk)
+    except Exception as exc:  # noqa: BLE001 — catch-up must never block a start
+        logger.warning("Futu catch-up fetch failed (%s). Seeking on the existing panel only.", exc)
+
+    rebuilt = False
+    if live is not None and not live.empty:
+        n_before = 0 if panel is None or getattr(panel, "empty", True) else len(panel)
+        panel = overlay_live_ohlcv(panel, live)
+        n_after = 0 if panel is None or panel.empty else len(panel)
+        logger.info(
+            "Catch-up merged %d live Futu rows into the panel (%d → %d).",
+            len(live),
+            n_before,
+            n_after,
+        )
+        env = TradingEnv(df=panel if panel is not None and not panel.empty else None, news_scores=state.news_scores)
+        rebuilt = True
+        if persist_panel and panel is not None and not panel.empty:
+            persist_enhanced_panel(panel)
+
+    env.reset()
+    caught_dt = env.seek_to_datetime(now_hk)
+    env.restore_portfolio(state.cash, state.holdings)
+    env.set_news_scores(state.news_scores)
+
+    live_px = broker.snapshot_prices()
+    if any(float(v or 0.0) > 0 for v in live_px.values()):
+        state.equity = state.cash + sum(state.holdings[t] * float(live_px.get(t) or 0.0) for t in CORE_TICKERS)
+    else:
+        state.equity = float(env._last_equity)
+
+    state.last_bar_datetime = str(caught_dt)
+    logger.info(
+        "State catch-up complete (no orders). env_before=%s env_now=%s bar=%d/%d rebuilt=%s cash=%.2f equity=%.2f",
+        before_dt,
+        caught_dt,
+        env._bar_index,
+        max(len(env.datetimes) - 1, 0),
+        rebuilt,
+        state.cash,
+        state.equity,
+    )
+    save_state(state)
+    return env, state, panel
 
 
 def predict_action(model, obs: np.ndarray) -> np.ndarray:
@@ -411,11 +577,22 @@ def _handle_stop(signum, _frame) -> None:  # noqa: ANN001
     _shutdown = True
 
 
-def run_loop(once: bool = False, dry_run: bool = False, poll_seconds: int = 60) -> None:
+def run_loop(
+    once: bool = False,
+    dry_run: bool = False,
+    poll_seconds: int = 60,
+    model_path: Path | None = None,
+    skip_catch_up: bool = False,
+) -> None:
+    # Log the trading brain before anything else so a wrong zip is obvious.
+    resolved_model = resolve_inference_model_path(model_path)
+    log_checkpoint_banner(resolved_model)
+
     # §8: load state FIRST, before any order
     state = load_state()
     news = NewsPoller()
     broker = FutuPaperBroker(dry_run=dry_run)
+    panel = None
     try:
         if ENHANCED_PARQUET.exists():
             import pandas as pd
@@ -424,21 +601,27 @@ def run_loop(once: bool = False, dry_run: bool = False, poll_seconds: int = 60) 
             logger.info("Loaded enhanced panel with news_score for the local env.")
         else:
             panel = load_processed()
-        env = TradingEnv(df=panel if panel is not None and not panel.empty else None)
+        env = TradingEnv(
+            df=panel if panel is not None and not panel.empty else None,
+            news_scores=state.news_scores,
+        )
     except Exception as exc:  # noqa: BLE001 — parquet is optional in Phase 1
         logger.warning("Could not load unified/enhanced parquet (%s); TradingEnv will use synthetic bars.", exc)
-        env = TradingEnv()
-    model = load_policy()
+        env = TradingEnv(news_scores=state.news_scores)
+        panel = None
+    model = load_policy(resolved_model)
 
     try:
         broker.connect()
         state = reconcile_with_futu(state, broker)
-        env._cash = state.cash
-        env._holdings = np.asarray([state.holdings[t] for t in CORE_TICKERS], dtype=np.float64)
-        env.set_news_scores(state.news_scores)
-        env.reset()
-        env._cash = state.cash
-        env._holdings = np.asarray([state.holdings[t] for t in CORE_TICKERS], dtype=np.float64)
+        if skip_catch_up:
+            env.reset()
+            env.seek_to_datetime(_hk_now())
+            env.restore_portfolio(state.cash, state.holdings)
+            env.set_news_scores(state.news_scores)
+            logger.warning("Catch-up skipped (--skip-catch-up). Env sought to now without Futu history.")
+        else:
+            env, state, panel = catch_up_env(env, state, broker, panel)
 
         while not _shutdown:
             if not any_core_market_open():
@@ -448,6 +631,23 @@ def run_loop(once: bool = False, dry_run: bool = False, poll_seconds: int = 60) 
                     break
                 time.sleep(wait)
                 continue
+
+            # Keep the observation window on the latest completed 10-min bar.
+            if not skip_catch_up:
+                try:
+                    import pandas as pd
+
+                    last = pd.Timestamp(env._current_dt())
+                    now_naive = pd.Timestamp(_hk_now().replace(tzinfo=None))
+                    if pd.notna(last) and (now_naive - last) >= pd.Timedelta(minutes=10):
+                        env, state, panel = catch_up_env(
+                            env, state, broker, panel, persist_panel=False
+                        )
+                    else:
+                        env.seek_to_datetime(_hk_now())
+                        env.restore_portfolio(state.cash, state.holdings)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("In-session catch-up failed (%s). Using current env bar.", exc)
 
             prices = broker.snapshot_prices()
             news_prev = dict(state.news_scores)
@@ -495,6 +695,8 @@ def run_loop(once: bool = False, dry_run: bool = False, poll_seconds: int = 60) 
                     send_telegram_alert(reason)
 
             state.equity = state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS)
+            state.last_bar_datetime = str(env._current_dt())
+            env.restore_portfolio(state.cash, state.holdings)
             if traded:
                 save_state(state)
             else:
@@ -516,6 +718,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--once", action="store_true", help="Run a single inference cycle then exit.")
     p.add_argument("--dry-run", action="store_true", help="Skip Futu OpenD orders.")
     p.add_argument("--poll-seconds", type=int, default=60, help="Seconds between cycles while a market is open.")
+    p.add_argument(
+        "--model",
+        type=Path,
+        default=None,
+        help="PPO zip to load (default: models/news_gpu_v2/best_model.zip).",
+    )
+    p.add_argument(
+        "--skip-catch-up",
+        action="store_true",
+        help="Do not pull missing Futu bars at startup (still seeks to now on the existing panel).",
+    )
     return p.parse_args(argv)
 
 
@@ -525,5 +738,11 @@ if __name__ == "__main__":
         signal.signal(signal.SIGINT, _handle_stop)
     if hasattr(signal, "SIGTERM"):
         signal.signal(signal.SIGTERM, _handle_stop)
-    run_loop(once=args.once, dry_run=args.dry_run, poll_seconds=args.poll_seconds)
+    run_loop(
+        once=args.once,
+        dry_run=args.dry_run,
+        poll_seconds=args.poll_seconds,
+        model_path=args.model,
+        skip_catch_up=args.skip_catch_up,
+    )
     sys.exit(0)

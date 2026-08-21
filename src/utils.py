@@ -30,8 +30,11 @@ ENHANCED_PARQUET = DATA_ENHANCED / "enhanced_data.parquet"
 STATE_PKL = PROJECT_ROOT / "state.pkl"
 MODELS_DIR = PROJECT_ROOT / "models"
 NEWS_MODELS_DIR = MODELS_DIR / "news"
+NEWS_GPU_V2_MODELS_DIR = MODELS_DIR / "news_gpu_v2"
 PRICE_ONLY_MODELS_DIR = MODELS_DIR / "price-only"
 BEST_MODEL_PATH = MODELS_DIR / "best_model.zip"
+# Paper-trading brain (Window 113, Calmar 2.05). Copied from checkpoint_2026-08-12.zip.
+INFERENCE_MODEL_PATH = NEWS_GPU_V2_MODELS_DIR / "best_model.zip"
 PRICE_ONLY_BEST_CHECKPOINT = PRICE_ONLY_MODELS_DIR / "checkpoint_2026-04-02.zip"
 
 # ---------------------------------------------------------------------------

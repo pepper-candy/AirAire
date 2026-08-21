@@ -8,4 +8,4 @@ python -m src.train_gpu_v2 --output models/news_gpu_v2 --device cuda --resume 11
 
 # Using FutuOpenD Terminal
 FutuOpenD.exe -lang=en
-python -m guide_and_test.paper-trade-test
+python -m test.paper-trade-test

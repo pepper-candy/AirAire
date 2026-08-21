@@ -73,11 +73,9 @@ from src.train import (  # noqa: E402
 )
 from src.data_loader import load_enhanced_data, load_processed, merge_price_news, panel_to_wide  # noqa: E402
 from src.trading_env import LOOKBACK_BARS, TradingEnv  # noqa: E402
-from src.utils import CORE_TICKERS, ENHANCED_PARQUET, INITIAL_CASH, MODELS_DIR, setup_logging  # noqa: E402
+from src.utils import CORE_TICKERS, ENHANCED_PARQUET, INITIAL_CASH, MODELS_DIR, NEWS_GPU_V2_MODELS_DIR, setup_logging  # noqa: E402
 
 logger = setup_logging("airaire.train_gpu_v2")
-
-NEWS_GPU_V2_MODELS_DIR = MODELS_DIR / "news_gpu_v2"
 
 # A40-2Q (2 GB dedicated) + 4 vCPUs. Previous GPU run: n_steps=4096, n_envs=4
 # → rollout 16384, only ~2 PPO updates / ~19k window (under-trained → collapse).
@@ -204,7 +202,7 @@ def _start_run_log(log_path: Path) -> tuple[object, TextIO]:
     )
     attached: list[logging.Logger] = []
     names = set(logging.root.manager.loggerDict)
-    names.update({"airaire", "airaire.train_gpu_v2", "airaire.train", "airaire.trading_env"})
+    names.update({"airaire", "airaire.train_gpu_v2", "airaire.train", "airaire.trading_env", "airaire.finetune_latest"})
     for name in names:
         if not str(name).startswith("airaire"):
             continue

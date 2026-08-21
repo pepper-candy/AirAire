@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
@@ -27,7 +29,11 @@ from src.utils import (
     DATA_RAW_FUTU,
     ENHANCED_PARQUET,
     FUTU_FILES,
+    FUTU_HOST,
+    FUTU_PORT,
+    HK_TZ,
     UNIFIED_PARQUET,
+    RateLimiter,
     setup_logging,
 )
 
@@ -354,6 +360,215 @@ def panel_to_wide(df: pd.DataFrame, field: str = "close") -> pd.DataFrame:
         return pd.DataFrame(columns=ALL_TICKERS)
     wide = df.pivot_table(index="datetime", columns="ticker", values=field, aggfunc="last")
     return wide.sort_index()
+
+
+# ---------------------------------------------------------------------------
+# Live Futu 10-min bars (inference catch-up + daily fine-tune)
+# ---------------------------------------------------------------------------
+FUTU_KLINE_LOOKBACK_DAYS = 30
+_FUTU_KLINE_MAX_PAGES = 20
+_futu_history_limiter = RateLimiter()
+
+
+def _as_date_str(value: datetime | pd.Timestamp | str | None, default: datetime | None = None) -> str:
+    if value is None:
+        value = default or datetime.now()
+    ts = pd.Timestamp(value)
+    if ts.tzinfo is not None:
+        ts = pd.Timestamp(ts.tz_convert(HK_TZ).replace(tzinfo=None))
+    return ts.strftime("%Y-%m-%d")
+
+
+def _klines_to_panel(ticker: str, data: pd.DataFrame) -> pd.DataFrame:
+    """Map a Futu ``request_history_kline`` frame onto STANDARD_COLUMNS."""
+    if data is None or len(data) == 0:
+        return pd.DataFrame(columns=STANDARD_COLUMNS)
+    time_col = "time_key" if "time_key" in data.columns else None
+    if time_col is None:
+        logger.warning("Futu kline for %s has no time_key column (%s).", ticker, list(data.columns))
+        return pd.DataFrame(columns=STANDARD_COLUMNS)
+    out = pd.DataFrame(
+        {
+            "datetime": pd.to_datetime(data[time_col], errors="coerce"),
+            "ticker": ticker,
+            "open": pd.to_numeric(data["open"], errors="coerce") if "open" in data.columns else 0.0,
+            "high": pd.to_numeric(data["high"], errors="coerce") if "high" in data.columns else 0.0,
+            "low": pd.to_numeric(data["low"], errors="coerce") if "low" in data.columns else 0.0,
+            "close": pd.to_numeric(data["close"], errors="coerce") if "close" in data.columns else 0.0,
+            "volume": pd.to_numeric(data["volume"], errors="coerce") if "volume" in data.columns else 0.0,
+        }
+    )
+    out = out.dropna(subset=["datetime"])
+    out["volume"] = out["volume"].fillna(0.0)
+    return out[STANDARD_COLUMNS].reset_index(drop=True)
+
+
+def fetch_futu_history(
+    tickers: list[str] | None = None,
+    start: datetime | pd.Timestamp | str | None = None,
+    end: datetime | pd.Timestamp | str | None = None,
+    *,
+    quote_ctx: Any = None,
+    limiter: RateLimiter | None = None,
+    host: str = FUTU_HOST,
+    port: int = FUTU_PORT,
+    lookback_days: int = FUTU_KLINE_LOOKBACK_DAYS,
+) -> pd.DataFrame:
+    """Pull 10-minute OHLCV from OpenD for ``tickers``.
+
+    Used when the operator has been offline (inference catch-up) or when the
+    daily fine-tune needs bars newer than ``enhanced_data.parquet``. Returns an
+    empty frame if ``futu-api`` / OpenD is unavailable — callers must tolerate that.
+    Timestamps stay naive local-market time, matching Bloomberg/Futu CSVs
+    (HK = Beijing, US = Eastern).
+    """
+    tickers = list(tickers or CORE_TICKERS)
+    end_ts = pd.Timestamp(end) if end is not None else pd.Timestamp.now()
+    if start is None:
+        start_ts = end_ts - pd.Timedelta(days=max(int(lookback_days), 1))
+    else:
+        start_ts = pd.Timestamp(start)
+    start_str = _as_date_str(start_ts)
+    end_str = _as_date_str(end_ts)
+    limiter = limiter or _futu_history_limiter
+
+    try:
+        from futu import AuType, KLType, OpenQuoteContext, RET_OK
+    except ImportError:
+        logger.warning("futu-api is not installed — skipping live kline fetch.")
+        return pd.DataFrame(columns=STANDARD_COLUMNS)
+
+    own_ctx = quote_ctx is None
+    ctx = quote_ctx
+    frames: list[pd.DataFrame] = []
+    try:
+        if ctx is None:
+            limiter.acquire()
+            ctx = OpenQuoteContext(host=host, port=port)
+        for ticker in tickers:
+            page_req_key = None
+            ticker_frames: list[pd.DataFrame] = []
+            for page in range(_FUTU_KLINE_MAX_PAGES):
+                limiter.acquire()
+                try:
+                    ret, data, page_req_key = ctx.request_history_kline(
+                        ticker,
+                        start=start_str,
+                        end=end_str,
+                        ktype=KLType.K_10M,
+                        autype=AuType.QFQ,
+                        max_count=1000,
+                        page_req_key=page_req_key,
+                    )
+                except Exception as exc:  # noqa: BLE001 — OpenD can drop mid-page
+                    logger.warning("request_history_kline(%s) raised %s", ticker, exc)
+                    break
+                if ret != RET_OK:
+                    logger.warning("request_history_kline(%s) failed: %s", ticker, data)
+                    break
+                part = _klines_to_panel(ticker, data if isinstance(data, pd.DataFrame) else pd.DataFrame())
+                if not part.empty:
+                    ticker_frames.append(part)
+                if page_req_key is None:
+                    break
+                if page == _FUTU_KLINE_MAX_PAGES - 1:
+                    logger.warning("Hit %d-page cap fetching %s 10-min bars.", _FUTU_KLINE_MAX_PAGES, ticker)
+            if ticker_frames:
+                combined = pd.concat(ticker_frames, ignore_index=True)
+                combined = combined.sort_values("datetime").drop_duplicates(subset=["datetime"], keep="last")
+                frames.append(combined)
+                logger.info(
+                    "Futu 10-min %s: %d bars (%s → %s)",
+                    ticker,
+                    len(combined),
+                    combined["datetime"].min(),
+                    combined["datetime"].max(),
+                )
+    finally:
+        if own_ctx and ctx is not None:
+            try:
+                ctx.close()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Error closing temporary OpenQuoteContext: %s", exc)
+
+    if not frames:
+        return pd.DataFrame(columns=STANDARD_COLUMNS)
+    out = pd.concat(frames, ignore_index=True).sort_values(["ticker", "datetime"]).reset_index(drop=True)
+    logger.info(
+        "Futu history overlay: %d rows, tickers=%s, span=%s → %s",
+        len(out),
+        sorted(out["ticker"].unique().tolist()),
+        out["datetime"].min(),
+        out["datetime"].max(),
+    )
+    return out
+
+
+def overlay_live_ohlcv(panel: pd.DataFrame | None, live: pd.DataFrame | None) -> pd.DataFrame:
+    """Append live Futu bars onto a long panel. Live rows win on (ticker, datetime).
+
+    ``news_score`` on brand-new bars is forward-filled from the last known
+    sentiment so the env never sees NaNs. Missing news stays 0.0.
+    """
+    if panel is None or panel.empty:
+        base = pd.DataFrame(columns=STANDARD_COLUMNS)
+    else:
+        base = panel.copy()
+        base["datetime"] = pd.to_datetime(base["datetime"], errors="coerce")
+
+    if live is None or live.empty:
+        return base.reset_index(drop=True) if not base.empty else pd.DataFrame(columns=list(base.columns) or STANDARD_COLUMNS)
+
+    fresh = live.copy()
+    fresh["datetime"] = pd.to_datetime(fresh["datetime"], errors="coerce")
+    if "news_score" in base.columns and "news_score" not in fresh.columns:
+        fresh["news_score"] = pd.NA
+    if "sentiment_score" in base.columns and "sentiment_score" not in fresh.columns:
+        fresh["sentiment_score"] = pd.NA
+
+    merged = pd.concat([base, fresh], ignore_index=True, sort=False)
+    merged = merged.dropna(subset=["datetime", "ticker"])
+    merged = merged.sort_values(["ticker", "datetime"])
+    merged = merged.drop_duplicates(subset=["ticker", "datetime"], keep="last")
+    for col in ("news_score", "sentiment_score"):
+        if col in merged.columns:
+            merged[col] = pd.to_numeric(merged[col], errors="coerce")
+            merged[col] = merged.groupby("ticker", group_keys=False)[col].ffill().fillna(0.0)
+    return merged.sort_values(["datetime", "ticker"]).reset_index(drop=True)
+
+
+def persist_enhanced_panel(panel: pd.DataFrame, path: Path | None = None) -> Path | None:
+    """Write the (possibly catch-up-extended) enhanced panel. Best-effort."""
+    if panel is None or panel.empty:
+        return None
+    dest = path or ENHANCED_PARQUET
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        panel.to_parquet(dest, index=False)
+        logger.info("Updated %s (%d rows, last bar %s)", dest, len(panel), panel["datetime"].max())
+        return dest
+    except Exception as exc:  # noqa: BLE001 — never block inference on a parquet write
+        logger.warning("Could not persist enhanced panel to %s (%s).", dest, exc)
+        return None
+
+
+def default_futu_fetch_start(
+    panel: pd.DataFrame | None,
+    *,
+    now: datetime | pd.Timestamp | None = None,
+    lookback_days: int = FUTU_KLINE_LOOKBACK_DAYS,
+) -> pd.Timestamp:
+    """Start date for an incremental Futu pull: last panel bar minus one day, capped at ``lookback_days``."""
+    now_ts = pd.Timestamp(now) if now is not None else pd.Timestamp.now()
+    floor = now_ts - pd.Timedelta(days=max(int(lookback_days), 1))
+    if panel is None or panel.empty or "datetime" not in panel.columns:
+        return floor
+    last = pd.Timestamp(pd.to_datetime(panel["datetime"], errors="coerce").max())
+    if pd.isna(last):
+        return floor
+    # One-day overlap so a mid-session restart re-fetches this morning's bars.
+    start = last - pd.Timedelta(days=1)
+    return max(start, floor)
 
 
 if __name__ == "__main__":

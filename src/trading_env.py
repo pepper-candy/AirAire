@@ -27,6 +27,7 @@ from gymnasium import spaces
 
 from src.utils import (
     CORE_TICKERS,
+    HK_TZ,
     INITIAL_CASH,
     calendar_feature_vector,
     setup_logging,
@@ -356,6 +357,55 @@ class TradingEnv(gym.Env):
             self._last_good_prices = np.ones(N_CORE, dtype=np.float64)
         obs = self._get_obs()
         return obs, {"bar_index": self._bar_index, "datetime": self._current_dt()}
+
+    def seek_to_datetime(self, target: datetime | pd.Timestamp | None = None) -> pd.Timestamp:
+        """Jump ``_bar_index`` to the last bar at or before ``target``. No rebalance.
+
+        Inference catch-up: if the bot starts at 12:45, call this (after
+        appending any missing Futu bars) so the lookback window ends at the
+        latest completed 10-min bar. Holdings / cash are left untouched —
+        restore them with ``restore_portfolio`` from ``state.pkl``.
+        """
+        if len(self.datetimes) == 0:
+            return self._current_dt()
+        if target is None:
+            idx = len(self.datetimes) - 1
+        else:
+            ts = pd.Timestamp(target)
+            if ts.tzinfo is not None:
+                # Panel timestamps are naive local-market clocks; operator time is HK.
+                ts = pd.Timestamp(ts.tz_convert(HK_TZ).replace(tzinfo=None))
+            idx = int(self.datetimes.searchsorted(ts, side="right")) - 1
+            idx = max(idx, 0)
+            idx = min(idx, len(self.datetimes) - 1)
+            # Keep a full lookback window when the panel is long enough.
+            idx = max(idx, min(self.lookback_bars, len(self.datetimes) - 1))
+        self._bar_index = int(idx)
+        if len(self._close_matrix):
+            seed_px = self._close_matrix[min(self._bar_index, len(self._close_matrix) - 1)]
+            seed_px = np.where(np.isfinite(seed_px) & (seed_px > 0), seed_px, self._last_good_prices)
+            self._last_good_prices = seed_px.astype(np.float64)
+        logger.info(
+            "TradingEnv seek_to_datetime target=%s -> bar=%d/%d dt=%s",
+            target,
+            self._bar_index,
+            max(len(self.datetimes) - 1, 0),
+            self._current_dt(),
+        )
+        return pd.Timestamp(self._current_dt())
+
+    def restore_portfolio(self, cash: float, holdings: dict[str, float] | None = None) -> None:
+        """Re-apply a persisted book after ``reset()`` / ``seek_to_datetime()``."""
+        self._cash = float(cash)
+        if holdings is not None:
+            self._holdings = np.asarray(
+                [float(holdings.get(t, 0.0)) for t in CORE_TICKERS],
+                dtype=np.float64,
+            )
+        prices = self._current_closes()
+        self._last_equity = self._mark_to_market(prices)
+        self._equity_curve = [self._last_equity]
+        self._returns = []
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
         action = np.asarray(action, dtype=np.float64).reshape(-1)
