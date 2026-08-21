@@ -9,6 +9,11 @@ Startup catch-up (Phase 4):
     If the operator logs in mid-session (e.g. 12:45), fetch missing 10-min bars
     from Futu, jump ``TradingEnv._bar_index`` to the latest completed bar, and
     sync ``state.pkl`` — no orders are placed during catch-up.
+
+Live loop (Phase 4):
+    Poll every 60s so we notice a new Futu 10-min close within a minute.
+    Place SIMULATE orders only on a *new* completed bar, or when news jumps
+    by ``NEWS_RETRADE_DELTA``. Same-bar 1-minute price drift does not rebalance.
 """
 
 from __future__ import annotations
@@ -83,6 +88,7 @@ class BotState:
     news_scores: dict[str, float] = field(default_factory=lambda: {t: 0.0 for t in CORE_TICKERS})
     updated_at: str = ""
     last_bar_datetime: str = ""
+    last_order_bar: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -106,6 +112,7 @@ class BotState:
             news_scores=news_scores,
             updated_at=str(raw.get("updated_at", "")),
             last_bar_datetime=str(raw.get("last_bar_datetime", "")),
+            last_order_bar=str(raw.get("last_order_bar", "")),
         )
 
 
@@ -131,6 +138,7 @@ def load_state(path: Path = STATE_PKL) -> BotState:
             "news_scores",
             "updated_at",
             "last_bar_datetime",
+            "last_order_bar",
         ):
             if hasattr(raw, key):
                 payload[key] = getattr(raw, key)
@@ -162,10 +170,10 @@ def save_state(state: BotState, path: Path = STATE_PKL) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Alpha Vantage news — ethical 5-minute cap per ticker, market hours only
+# Alpha Vantage news — 60s per ticker by default (education / paid 75/min)
 # ---------------------------------------------------------------------------
 class NewsPoller:
-    """Academic-tier news fetcher. Never hits the same ticker more than once / 5 minutes."""
+    """Live Alpha Vantage scores. Default 60s per ticker (education 75/min)."""
 
     def __init__(self, api_key: str | None = None, min_interval: int = NEWS_MIN_INTERVAL_SECONDS) -> None:
         self.api_key = (api_key or os.getenv("ALPHAVANTAGE_API_KEY") or os.getenv("ALPHA_VANTAGE_API_KEY") or "").strip()
@@ -401,6 +409,19 @@ class FutuPaperBroker:
 def round_to_lot(ticker: str, shares: float) -> int:
     lot = LOT_SIZES.get(ticker, 1)
     return int(shares // lot) * lot
+
+
+# Match explain_action's "jumped / dropped sharply" threshold. Intra-bar
+# rebalances are allowed only when news moves at least this much; otherwise
+# 60-second polls would chase 1-minute price noise on the same 10-min bar.
+NEWS_RETRADE_DELTA = 0.25
+
+
+def _news_jumped(prev: dict[str, float], now: dict[str, float]) -> bool:
+    for ticker in CORE_TICKERS:
+        if abs(float(now.get(ticker, 0.0)) - float(prev.get(ticker, 0.0))) >= NEWS_RETRADE_DELTA:
+            return True
+    return False
 
 
 def reconcile_with_futu(state: BotState, broker: FutuPaperBroker) -> BotState:
@@ -657,19 +678,33 @@ def run_loop(
 
             obs = env._get_obs()
             raw_action = predict_action(model, obs)
-            # Do not trade names whose market is shut (e.g. US names during HK morning).
-            gated = raw_action.copy()
-            for i, ticker in enumerate(CORE_TICKERS):
-                if not is_ticker_market_open(ticker):
-                    gated[i] = 0.0
-
             long_term = env._long_term_features()
             # last 6 entries are HK×US correlations; use the mean as a reason hint
             corr_hint = float(np.mean(long_term[-6:])) if len(long_term) >= 6 else 0.0
 
+            bar_id = str(env._current_dt())
+            new_bar = bar_id != state.last_order_bar
+            news_jump = _news_jumped(news_prev, news_now)
+            allow_orders = new_bar or news_jump
+            if not allow_orders:
+                logger.info(
+                    "Same 10-min bar (%s) and news unchanged — skip orders this 60s cycle (no 1-min price chase).",
+                    bar_id,
+                )
+
             traded = False
             for i, ticker in enumerate(CORE_TICKERS):
-                action_i = float(gated[i])
+                current = float(state.holdings.get(ticker, 0.0))
+                # Closed market: KEEP the position. Gating the action to 0 would
+                # flatten US names during the HK session (and HK names after 16:00).
+                if not is_ticker_market_open(ticker):
+                    logger.info(
+                        "%s market closed — keep holdings=%.4f, no order.",
+                        ticker,
+                        current,
+                    )
+                    continue
+                action_i = float(raw_action[i])
                 px = float(prices.get(ticker) or 0.0)
                 if px <= 0 and not dry_run:
                     logger.info("No live price for %s — HOLD.", ticker)
@@ -678,13 +713,12 @@ def run_loop(
                 px = px or 1.0
                 equity = max(state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS), 1.0)
                 target_shares = (action_i * equity) / px
-                current = float(state.holdings.get(ticker, 0.0))
                 delta = round_to_lot(ticker, target_shares - current)
                 reason = explain_action(ticker, action_i, delta, news_now.get(ticker, 0.0), news_prev.get(ticker, 0.0), corr_hint)
-                logger.info(reason)
+                logger.info("%s%s", "" if allow_orders else "[preview, no order] ", reason)
                 state.last_reason = reason
                 state.last_action[ticker] = action_i
-                if delta == 0:
+                if not allow_orders or delta == 0:
                     continue
                 is_buy = delta > 0
                 ok = broker.place_order(ticker, abs(delta), px, is_buy=is_buy)
@@ -694,10 +728,12 @@ def run_loop(
                     traded = True
                     send_telegram_alert(reason)
 
+            if allow_orders:
+                state.last_order_bar = bar_id
             state.equity = state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS)
             state.last_bar_datetime = str(env._current_dt())
             env.restore_portfolio(state.cash, state.holdings)
-            if traded:
+            if traded or allow_orders:
                 save_state(state)
             else:
                 logger.info("No fills this cycle. Equity≈%.2f cash=%.2f", state.equity, state.cash)

@@ -36,6 +36,29 @@ BEST_MODEL_PATH = MODELS_DIR / "best_model.zip"
 # Paper-trading brain (Window 113, Calmar 2.05). Copied from checkpoint_2026-08-12.zip.
 INFERENCE_MODEL_PATH = NEWS_GPU_V2_MODELS_DIR / "best_model.zip"
 PRICE_ONLY_BEST_CHECKPOINT = PRICE_ONLY_MODELS_DIR / "checkpoint_2026-04-02.zip"
+# Resurrection goldens in models/news_gpu_v2. Training must not clobber these;
+# only an explicit Telegram Promote / --promote-zip may copy onto best_model.zip.
+PROTECTED_INFERENCE_ZIPS = frozenset(
+    {
+        "best_model.zip",
+        "checkpoint_2026-08-12.zip",
+        "checkpoint_2026-08-18.zip",
+    }
+)
+
+
+def is_protected_inference_artifact(path: Path) -> bool:
+    """True if ``path`` is a Phase-4 golden inside ``models/news_gpu_v2``."""
+    path = Path(path)
+    if path.suffix != ".zip":
+        path = path.with_suffix(".zip")
+    if path.name not in PROTECTED_INFERENCE_ZIPS:
+        return False
+    try:
+        path.resolve().relative_to(NEWS_GPU_V2_MODELS_DIR.resolve())
+        return True
+    except ValueError:
+        return False
 
 # ---------------------------------------------------------------------------
 # Asset universe (PLAN.md §3)
@@ -132,12 +155,15 @@ INITIAL_CASH = float(os.getenv("INITIAL_CASH", "1000000"))
 FUTU_MAX_REQUESTS = 60
 FUTU_WINDOW_SECONDS = 30
 
-# Alpha Vantage Academic / education: no 25/day cap. Historical backfill can
-# run ~1 call/sec. Live inference still uses the 5-minute ethical cap below.
-# If you see "API call frequency" Notes, raise this (e.g. 3 or 12).
-NEWS_MIN_INTERVAL_SECONDS = 5 * 60
-NEWS_HISTORICAL_INTERVAL_SECONDS = float(os.getenv("NEWS_HISTORICAL_INTERVAL", "1"))
+# Alpha Vantage education / paid NEWS_SENTIMENT: 75 calls / 60s.
+# Set NEWS_HISTORICAL_INTERVAL (seconds per call) only if AV returns frequency notes.
+# Live poller defaults to 60s so it matches --poll-seconds 60 (5 tickers/min << 75).
+AV_MAX_REQUESTS = 75
+AV_WINDOW_SECONDS = 60
+NEWS_MIN_INTERVAL_SECONDS = int(os.getenv("NEWS_MIN_INTERVAL_SECONDS", "60"))
+NEWS_HISTORICAL_INTERVAL_SECONDS = float(os.getenv("NEWS_HISTORICAL_INTERVAL", "0") or 0)
 NEWS_HEADLINE_WINDOW = 10
+NEWS_HISTORY_CHUNK_DAYS = 7  # smaller than 14 so liquid names do not hit the 1000-article cap
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 BLOOMBERG_STALE_DAYS = 5
@@ -243,7 +269,9 @@ def seconds_until_next_open(now: datetime | None = None) -> int:
     """Sleep hint when both HK and US cash sessions are closed."""
     now_utc = (now or datetime.now(tz=UTC)).astimezone(UTC)
     candidates: list[datetime] = []
-    for tz, open_hm in ((HK_TZ, (9, 30)), (US_TZ, (9, 30))):
+    # HK has a lunch break (12:00–13:00). Include 13:00 so we wake for the afternoon
+    # session instead of aiming at the next 09:30 only.
+    for tz, open_hm in ((HK_TZ, (9, 30)), (HK_TZ, (13, 0)), (US_TZ, (9, 30))):
         local = now_utc.astimezone(tz)
         open_dt = local.replace(hour=open_hm[0], minute=open_hm[1], second=0, microsecond=0)
         if open_dt <= local:
@@ -287,19 +315,127 @@ def calendar_feature_vector(ref: date | None = None) -> list[float]:
 # ---------------------------------------------------------------------------
 # Telegram alerts (placeholder that becomes live once env vars are set)
 # ---------------------------------------------------------------------------
-def send_telegram_alert(message: str) -> bool:
-    """Send a Telegram message. No-ops with a log line if token/chat are missing."""
+TELEGRAM_CALLBACK_PROMOTE = "airaire_promote"
+TELEGRAM_CALLBACK_KEEP = "airaire_keep"
+
+
+def telegram_auth() -> tuple[str, str] | None:
+    """Return (bot_token, chat_id) or None if .env is not configured."""
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
     if not token or not chat_id:
+        return None
+    return token, chat_id
+
+
+def send_telegram_alert(message: str, reply_markup: dict | None = None) -> bool:
+    """Send a Telegram message. No-ops with a log line if token/chat are missing."""
+    return send_telegram_message(message, reply_markup=reply_markup) is not None
+
+
+def send_telegram_message(message: str, reply_markup: dict | None = None) -> dict | None:
+    """POST sendMessage. Returns Telegram's ``result`` object (includes message_id)."""
+    auth = telegram_auth()
+    if auth is None:
         logger.info("Telegram alert skipped (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID unset): %s", message)
-        return False
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
+        return None
+    token, chat_id = auth
+    payload: dict = {"chat_id": chat_id, "text": message}
+    if reply_markup is not None:
+        payload["reply_markup"] = reply_markup
+    data = _telegram_post(token, "sendMessage", payload, timeout=15)
+    if data is None:
+        return None
+    logger.info("Telegram alert sent.")
+    return data.get("result") if isinstance(data.get("result"), dict) else data
+
+
+def _telegram_post(token: str, method: str, payload: dict, *, timeout: float) -> dict | None:
+    url = f"https://api.telegram.org/bot{token}/{method}"
     try:
-        resp = requests.post(url, json={"chat_id": chat_id, "text": message}, timeout=10)
+        resp = requests.post(url, json=payload, timeout=timeout)
         resp.raise_for_status()
-        logger.info("Telegram alert sent.")
-        return True
+        body = resp.json()
     except requests.RequestException as exc:
-        logger.warning("Telegram alert failed: %s", exc)
-        return False
+        logger.warning("Telegram %s failed: %s", method, exc)
+        return None
+    except ValueError as exc:
+        logger.warning("Telegram %s returned non-JSON: %s", method, exc)
+        return None
+    if not body.get("ok"):
+        logger.warning("Telegram %s rejected: %s", method, body)
+        return None
+    return body
+
+
+def drain_telegram_updates() -> int:
+    """Discard pending updates so a stale button tap cannot promote today's zip."""
+    auth = telegram_auth()
+    if auth is None:
+        return 0
+    token, _ = auth
+    body = _telegram_post(token, "getUpdates", {"timeout": 0}, timeout=15)
+    if not body:
+        return 0
+    results = body.get("result") or []
+    if not results:
+        return 0
+    last_id = int(results[-1]["update_id"])
+    _telegram_post(token, "getUpdates", {"timeout": 0, "offset": last_id + 1}, timeout=15)
+    return last_id + 1
+
+
+def wait_telegram_callback(*, timeout_seconds: int, allowed: tuple[str, ...] = ()) -> str | None:
+    """Long-poll ``getUpdates`` until a callback from our chat arrives or time runs out.
+
+    Returns the ``callback_data`` string, or None on timeout / missing credentials.
+    Only callbacks from ``TELEGRAM_CHAT_ID`` whose data is in ``allowed`` count.
+    """
+    auth = telegram_auth()
+    if auth is None:
+        return None
+    token, chat_id = auth
+    allowed_set = set(allowed) if allowed else {TELEGRAM_CALLBACK_PROMOTE, TELEGRAM_CALLBACK_KEEP}
+    deadline = time.monotonic() + max(int(timeout_seconds), 1)
+    offset = drain_telegram_updates()
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        poll = int(min(25, max(1, remaining)))
+        body = _telegram_post(
+            token,
+            "getUpdates",
+            {"timeout": poll, "offset": offset, "allowed_updates": ["callback_query"]},
+            timeout=poll + 10,
+        )
+        if not body:
+            time.sleep(min(2.0, max(0.5, remaining)))
+            continue
+        for upd in body.get("result") or []:
+            offset = int(upd.get("update_id", 0)) + 1
+            query = upd.get("callback_query") or {}
+            data = str(query.get("data") or "")
+            from_chat = str((query.get("message") or {}).get("chat", {}).get("id") or query.get("from", {}).get("id") or "")
+            if from_chat != str(chat_id):
+                continue
+            qid = query.get("id")
+            if qid:
+                _telegram_post(
+                    token,
+                    "answerCallbackQuery",
+                    {"callback_query_id": qid},
+                    timeout=10,
+                )
+            if data in allowed_set:
+                msg = query.get("message") or {}
+                mid = msg.get("message_id")
+                if mid is not None:
+                    _telegram_post(
+                        token,
+                        "editMessageReplyMarkup",
+                        {"chat_id": chat_id, "message_id": mid, "reply_markup": {"inline_keyboard": []}},
+                        timeout=10,
+                    )
+                return data
+        # Empty poll or irrelevant updates — keep waiting until the deadline.

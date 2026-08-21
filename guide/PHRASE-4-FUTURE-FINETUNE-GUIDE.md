@@ -1,9 +1,10 @@
-# 📄 Sync Document for Cursor (Grok 4.6)
+# GPU v2 resurrection notes (entropy collapse → Window 113/118)
 
 > **Date:** 2026-08-21  
-> **Project:** AirAire - AI Quant Agent  
-> **Status:** Phase 3 (Training) Optimized. Ready for Phase 4 (Paper Trading).  
-> **Repository:** `C:\Users\mongk\Desktop\airaire\`
+> **Status:** Tasks A/B/C below are **done**. Do not treat this file as a to-do list.  
+> **Paper trading / daily ops / full timeline:** [`PHRASE-4-EXECUTION-&-DAILY-WORK.md`](PHRASE-4-EXECUTION-&-DAILY-WORK.md)
+
+Keep this page for the entropy-collapse / resurrection story only.
 
 ---
 
@@ -43,29 +44,15 @@ The user has cleaned the `models/` folder. Only these two essential checkpoints 
 
 ---
 
-## 3. 🎯 Immediate Action Items for Cursor
+## 3. Immediate Action Items — all done (21 Aug)
 
-### Task A: Set the Inference Model
-- **File:** `src/inference.py`
-- **Action:** Ensure it loads `models/news_gpu_v2/best_model.zip`.
-- *(Optional but safe)*: Add a fallback print statement so the user knows exactly which checkpoint is loaded on startup.
+See `PHRASE-4-EXECUTION-&-DAILY-WORK.md` for how these actually work now (live_best, Telegram Promote, 60s poll / 10-min orders, closed-market keep).
 
-### Task B: Create `src/finetune_latest.py` (Incremental Daily Update)
-Instead of running the heavy 118-window full training every day, we need a **lightweight daily fine-tune script**.
+### Task A: Set the Inference Model — DONE
+- Loads `models/news_gpu_v2/best_model.zip` with a startup banner.
 
-- **Function:** Load the latest checkpoint (e.g., `checkpoint_2026-08-18.zip`), run training on **the latest 1-3 windows** (e.g., Window 119), and save a new checkpoint.
-- **How it works:**
-  1. Load `enhanced_data.parquet`.
-  2. Slice the last 30 days of data of that day. (update from futu api daily or on missing days if user didn't go online for days.)
-  3. Load the current best model (or latest checkpoint).
-  4. Run PPO for a few updates (as if the latest training settings).
-  5. Save to `models/news_gpu_v2/finetuned_{date}.zip`.
-- **Why:** This takes ~2-3 minutes on the GPU VM, perfect for the user's limited daily time window.
+### Task B: Create `src/finetune_latest.py` — DONE
+- Latest 1–3 windows, GPU v2 settings, Promote/Keep vs live Calmar.
 
-### Task C: Validate `inference.py` "Catch-Up" Logic
-- The user is worried about being offline for hours (e.g., logging in at 12:45 PM).
-- **Fix:** In `inference.py`, when the bot starts, it should:
-  1. Load `state.pkl`.
-  2. Fetch the latest OHLCV from Futu.
-  3. Advance the `TradingEnv`'s internal `_bar_index` to match the latest time WITHOUT placing orders (pure state catch-up).
-  4. Then enter the normal trading loop.
+### Task C: Catch-up logic — DONE
+- Futu klines, seek, restore `state.pkl`, no orders during catch-up.

@@ -73,7 +73,15 @@ from src.train import (  # noqa: E402
 )
 from src.data_loader import load_enhanced_data, load_processed, merge_price_news, panel_to_wide  # noqa: E402
 from src.trading_env import LOOKBACK_BARS, TradingEnv  # noqa: E402
-from src.utils import CORE_TICKERS, ENHANCED_PARQUET, INITIAL_CASH, MODELS_DIR, NEWS_GPU_V2_MODELS_DIR, setup_logging  # noqa: E402
+from src.utils import (  # noqa: E402
+    CORE_TICKERS,
+    ENHANCED_PARQUET,
+    INITIAL_CASH,
+    MODELS_DIR,
+    NEWS_GPU_V2_MODELS_DIR,
+    is_protected_inference_artifact,
+    setup_logging,
+)
 
 logger = setup_logging("airaire.train_gpu_v2")
 
@@ -748,9 +756,16 @@ def _train_impl(
         saved: Path | None = None
         if not test:
             ckpt = output_dir / f"checkpoint_{win.end.date()}"
-            model.save(str(ckpt))
-            saved = ckpt.with_suffix(".zip")
-            logger.info("Saved %s", saved)
+            if is_protected_inference_artifact(ckpt):
+                logger.warning(
+                    "Refusing to overwrite Phase-4 golden %s.zip. "
+                    "Use src.finetune_latest (Promote) to change paper-trading weights.",
+                    ckpt.name,
+                )
+            else:
+                model.save(str(ckpt))
+                saved = ckpt.with_suffix(".zip")
+                logger.info("Saved %s", saved)
 
         if policy_has_nan(model):
             logger.error(
@@ -847,14 +862,21 @@ def _train_impl(
         _save_log(metrics, log_path)
         if best_ckpt is not None and best_ckpt.exists():
             dest = output_dir / "best_model.zip"
-            shutil.copy2(best_ckpt, dest)
-            logger.info(
-                "Best checkpoint Sharpe=%.4f Calmar=%.4f -> copied %s to %s",
-                best_sharpe,
-                best_key[1] if best_key is not None else float("nan"),
-                best_ckpt.name,
-                dest,
-            )
+            if is_protected_inference_artifact(dest):
+                logger.warning(
+                    "Refusing to overwrite %s. Paper trading is promoted only via "
+                    "src.finetune_latest Telegram Promote / --promote-zip.",
+                    dest,
+                )
+            else:
+                shutil.copy2(best_ckpt, dest)
+                logger.info(
+                    "Best checkpoint Sharpe=%.4f Calmar=%.4f -> copied %s to %s",
+                    best_sharpe,
+                    best_key[1] if best_key is not None else float("nan"),
+                    best_ckpt.name,
+                    dest,
+                )
         log_gpu_memory("finished")
     else:
         logger.info("--test complete. Checkpoints and training_log.csv were not written.")

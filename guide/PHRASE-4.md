@@ -1,5 +1,7 @@
 # 📊 Project Status & Next Phase: Full News-Integrated Training
 
+> **Superseded as a status page (2026-08-21).** News training, GPU v2, resurrection, and paper trading are documented in [`PHRASE-4-EXECUTION-&-DAILY-WORK.md`](PHRASE-4-EXECUTION-&-DAILY-WORK.md). The table below still says “news not implemented” — that is **no longer true**. Keep this file as the 18 Aug price-only snapshot.
+
 > **Date:** 2026-08-18
 > **Status:** Price-Only Training Completed (10 windows) → Ready for Full News Integration
 > **IDE:** Cursor (Grok 4.6)

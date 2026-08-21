@@ -1,4 +1,6 @@
 @echo off
+REM Copy this file to the GPU VM desktop (C:\Users\klmong\Desktop).
+REM It always cds into the project; do not rely on the .bat living inside airaire.
 title AirAire - Paper Trader (Continuous)
 cd /d C:\Users\klmong\Desktop\airaire
 
@@ -13,6 +15,6 @@ timeout /t 5 /nobreak > nul
 
 echo [3/3] Starting inference bot (Continuous Mode)...
 echo Press CTRL+C to stop.
-python -m src.inference --poll-seconds 600
+python -m src.inference --poll-seconds 60
 
 pause

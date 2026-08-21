@@ -1,12 +1,12 @@
 """Historical Alpha Vantage NEWS_SENTIMENT loader (PLAN.md §4D / PHRASE-4).
 
-Live inference still uses the 5-minute ethical cap in ``inference.NewsPoller``.
-This module is the *training* path:
+Education / paid tier is 75 calls / 60s. Fine-tune always re-queries the latest
+window before PPO so new bars are not trained on forward-filled stale scores.
 
 * Fetch + cache article-level sentiment under ``data/raw/news/``
-* Reduce to a 10-minute series matching PLAN.md: mean of the last 10 headlines
+* Reduce to a 10-minute series: mean of the last 10 headlines
 * Warn and continue (zeros) if the API is missing or fails
-* Never re-hit the API for a date range that is already in ``fetch_meta.json``
+* Daily fine-tune uses ``force_fetch`` on the recent window; older cache stays
 
 Alpha Vantage ``time_published`` is treated as a naive clock (same convention as
 Bloomberg bars). A few hours of timezone skew still leaves the same-session
@@ -36,13 +36,16 @@ from dotenv import load_dotenv
 
 from src.utils import (
     ALPHA_VANTAGE_URL,
+    AV_MAX_REQUESTS,
     AV_TICKER_ALIASES,
     AV_TICKERS,
     AV_TOPIC_FALLBACK,
+    AV_WINDOW_SECONDS,
     CORE_TICKERS,
     DATA_RAW_NEWS,
     NEWS_HEADLINE_WINDOW,
     NEWS_HISTORICAL_INTERVAL_SECONDS,
+    NEWS_HISTORY_CHUNK_DAYS,
     RateLimiter,
     setup_logging,
 )
@@ -67,7 +70,10 @@ FETCH_META_PATH = DATA_RAW_NEWS / "fetch_meta.json"
 NEWS_ALL_PARQUET = DATA_RAW_NEWS / "news_all.parquet"
 _AV_SYMBOL_RE = re.compile(r"^[A-Za-z0-9:_-]+$")
 
-_historical_limiter = RateLimiter(max_requests=1, window_seconds=NEWS_HISTORICAL_INTERVAL_SECONDS)
+if NEWS_HISTORICAL_INTERVAL_SECONDS > 0:
+    _av_limiter = RateLimiter(max_requests=1, window_seconds=NEWS_HISTORICAL_INTERVAL_SECONDS)
+else:
+    _av_limiter = RateLimiter(max_requests=AV_MAX_REQUESTS, window_seconds=AV_WINDOW_SECONDS)
 
 # Phrase-4 example filenames, accepted as extra cache locations.
 _LEGACY_NEWS_CSV = {
@@ -281,7 +287,7 @@ def _is_rate_limit(message: str) -> bool:
 def _request_news_sentiment(params: dict[str, Any], retries: int = 4) -> dict[str, Any]:
     last_error = "unknown error"
     for attempt in range(retries):
-        _historical_limiter.acquire()
+        _av_limiter.acquire()
         try:
             resp = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=30)
             resp.raise_for_status()
@@ -424,7 +430,7 @@ def fetch_historical_news(
     fetched_any = False
 
     for symbol in symbols:
-        for chunk_start, chunk_end in _chunk_range(start, end, days=14):
+        for chunk_start, chunk_end in _chunk_range(start, end, days=NEWS_HISTORY_CHUNK_DAYS):
             params = {
                 "function": "NEWS_SENTIMENT",
                 "tickers": symbol,
@@ -461,7 +467,7 @@ def fetch_historical_news(
         topic = AV_TOPIC_FALLBACK.get(ticker)
         if topic:
             logger.warning("%s: no ticker-specific articles. Falling back to topics=%s (overall sentiment).", ticker, topic)
-            for chunk_start, chunk_end in _chunk_range(start, end, days=14):
+            for chunk_start, chunk_end in _chunk_range(start, end, days=NEWS_HISTORY_CHUNK_DAYS):
                 params = {
                     "function": "NEWS_SENTIMENT",
                     "topics": topic,
@@ -570,6 +576,7 @@ def latest_ticker_score(ticker: str, api_key: str | None = None, limit: int = NE
             "apikey": key,
         }
         try:
+            _av_limiter.acquire()
             resp = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=20)
             resp.raise_for_status()
             payload = resp.json()

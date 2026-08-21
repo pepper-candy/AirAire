@@ -5,22 +5,29 @@ from the newest ``checkpoint_*.zip`` / ``finetuned_*.zip`` in
 ``models/news_gpu_v2`` — typically ``checkpoint_2026-08-18.zip`` (resurrected
 Window 118, Calmar 1.83) until a later fine-tune exists.
 
-``best_model.zip`` (Window 113, Calmar 2.05) is the paper-trading brain and is
-not overwritten here.
+``best_model.zip`` is the paper-trading brain. Fine-tune never copies it unless
+you press **Promote** on Telegram (or run ``--promote-zip``). The comparison bar
+is ``live_best.json`` (starts as Window 113 / Calmar ~2.05, then follows whatever
+you promoted).
 
 Typical GPU VM runtime: ~2-3 minutes for 1 window (8 PPO updates, same
-hyperparameters as ``train_gpu_v2``).
+hyperparameters as ``train_gpu_v2``), plus a short Alpha Vantage refresh of
+the latest ~30 days (education 75/min) before PPO starts.
 
     python -m src.finetune_latest
     python -m src.finetune_latest --windows 3
-    python -m src.finetune_latest --no-futu --device cpu
+    python -m src.finetune_latest --promote-wait 0
+    python -m src.finetune_latest --promote-zip models/news_gpu_v2/finetuned_2026-08-21.zip
+    python -m src.finetune_latest --skip-news
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import re
+import shutil
 import sys
 from datetime import datetime
 from multiprocessing import freeze_support
@@ -67,26 +74,26 @@ from src.utils import (
     ENHANCED_PARQUET,
     HK_TZ,
     NEWS_GPU_V2_MODELS_DIR,
+    PROTECTED_INFERENCE_ZIPS,
+    TELEGRAM_CALLBACK_KEEP,
+    TELEGRAM_CALLBACK_PROMOTE,
     send_telegram_alert,
     setup_logging,
+    telegram_auth,
+    wait_telegram_callback,
 )
 
 logger = setup_logging("airaire.finetune_latest")
 
 # Golden artifacts from the 2026-08-20 resurrection. Never overwrite these.
-PROTECTED_ZIPS = frozenset(
-    {
-        "best_model.zip",  # paper trading (Window 113, Calmar 2.05)
-        "checkpoint_2026-08-12.zip",  # same weights as best_model
-        "checkpoint_2026-08-18.zip",  # continue-training seed (Window 118, Calmar 1.83)
-    }
-)
+PROTECTED_ZIPS = PROTECTED_INFERENCE_ZIPS
 _DATED_ZIP_RE = re.compile(r"^(checkpoint|finetuned)_(\d{4}-\d{2}-\d{2})\.zip$")
 MIN_WINDOWS = 1
 MAX_WINDOWS = 3
 
 # Promotion baselines from the 2026-08-20 resurrection (training_log_history.csv).
-# Compared against the latest fine-tune window; never auto-copies best_model.zip.
+# Compared against the *live* paper-trading brain (live_best.json), which starts
+# as Window 113 / Calmar ~2.05 and moves when you Promote on Telegram (or --promote-zip).
 TRADING_GOLDEN_WINDOW = 113
 TRADING_GOLDEN_END = "2026-08-12"
 TRADING_GOLDEN_CALMAR = 2.053856720691549  # ~2.05, paper-trading brain
@@ -98,6 +105,9 @@ TRAINING_SEED_CALMAR = 1.832871817457733  # continue-training seed
 TRAINING_SEED_ZIP = "checkpoint_2026-08-18.zip"
 
 FINETUNE_LOG_NAME = "finetune_log.csv"
+LIVE_BEST_JSON = "live_best.json"
+PINNED_ROLES = ("trading_golden", "training_seed", "live_best")
+DEFAULT_PROMOTE_WAIT_SECONDS = 600
 FINETUNE_LOG_COLUMNS = [
     "run_id",
     "role",
@@ -116,7 +126,8 @@ FINETUNE_LOG_COLUMNS = [
     "entropy_loss",
     "ppo_updates",
     "zip",
-    "beats_trading_golden",
+    "beats_trading_golden",  # same flag as beats_live_best; name kept for existing CSVs
+    "beats_live_best",
 ]
 
 
@@ -159,8 +170,30 @@ def resolve_latest_checkpoint(output_dir: Path, explicit: Path | None = None) ->
     return chosen
 
 
-def load_panel(*, refresh_futu: bool, lookback_days: int, force_news_fetch: bool) -> pd.DataFrame:
-    """Load enhanced parquet, optionally append missing Futu 10-min bars, ffill news."""
+def _merge_recent_news(panel: pd.DataFrame, news: pd.DataFrame, cutoff: pd.Timestamp) -> pd.DataFrame:
+    """Re-score bars at/after ``cutoff``. Older ``news_score`` values stay as-is."""
+    from src.data_loader import merge_price_news
+
+    cutoff = pd.Timestamp(cutoff)
+    older = panel.loc[pd.to_datetime(panel["datetime"]) < cutoff].copy()
+    recent = panel.loc[pd.to_datetime(panel["datetime"]) >= cutoff].copy()
+    if recent.empty:
+        return panel
+    recent = merge_price_news(recent.drop(columns=["news_score"], errors="ignore"), news)
+    if older.empty:
+        return _sanitize_panel(recent)
+    return _sanitize_panel(pd.concat([older, recent], ignore_index=True))
+
+
+def load_panel(
+    *,
+    refresh_futu: bool,
+    lookback_days: int,
+    force_news_fetch: bool,
+    skip_news: bool = False,
+    news_days: int | None = None,
+) -> pd.DataFrame:
+    """Load enhanced parquet, overlay Futu bars, then always refresh recent Alpha Vantage news."""
     if not ENHANCED_PARQUET.exists():
         raise FileNotFoundError(
             f"{ENHANCED_PARQUET} is missing. Build it once with `python -m src.data_loader` "
@@ -174,38 +207,49 @@ def load_panel(*, refresh_futu: bool, lookback_days: int, force_news_fetch: bool
         panel["datetime"].min() if not panel.empty else None,
         panel["datetime"].max() if not panel.empty else None,
     )
-    if not refresh_futu:
-        return panel
 
     now = _hk_today()
-    start = default_futu_fetch_start(panel, now=now, lookback_days=lookback_days)
-    logger.info("Refreshing Futu 10-min bars from %s to %s (offline-gap fill).", start.date(), now.date())
-    try:
-        live = fetch_futu_history(CORE_TICKERS, start=start, end=now, lookback_days=lookback_days)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Futu refresh failed (%s). Fine-tune continues on the cached parquet.", exc)
-        return panel
-
-    if live is None or live.empty:
-        logger.info("No new Futu bars (OpenD down or already current). Using cached parquet.")
-        return panel
-
-    old_max = pd.Timestamp(panel["datetime"].max()) if not panel.empty else None
-    panel = _sanitize_panel(overlay_live_ohlcv(panel, live))
-    new_max = pd.Timestamp(panel["datetime"].max()) if not panel.empty else None
-    logger.info("Panel after Futu overlay: last bar %s → %s", old_max, new_max)
-
-    # Pull news only for the newly added span so we do not re-backfill 2 years.
-    if old_max is not None and new_max is not None and new_max > old_max:
+    if refresh_futu:
+        start = default_futu_fetch_start(panel, now=now, lookback_days=lookback_days)
+        logger.info("Refreshing Futu 10-min bars from %s to %s (offline-gap fill).", start.date(), now.date())
         try:
-            from src.news_loader import load_all_news
-            from src.data_loader import merge_price_news
+            live = fetch_futu_history(CORE_TICKERS, start=start, end=now, lookback_days=lookback_days)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Futu refresh failed (%s). Fine-tune continues; news refresh still runs.", exc)
+            live = None
+        if live is None or live.empty:
+            logger.info("No new Futu bars (OpenD down or already current).")
+        else:
+            old_max = pd.Timestamp(panel["datetime"].max()) if not panel.empty else None
+            panel = _sanitize_panel(overlay_live_ohlcv(panel, live))
+            new_max = pd.Timestamp(panel["datetime"].max()) if not panel.empty else None
+            logger.info("Panel after Futu overlay: last bar %s → %s", old_max, new_max)
 
-            news = load_all_news(old_max - pd.Timedelta(days=2), new_max, force_fetch=force_news_fetch)
-            if news is not None and not news.empty:
-                panel = _sanitize_panel(merge_price_news(panel.drop(columns=["news_score"], errors="ignore"), news))
-        except Exception as exc:  # noqa: BLE001 — sentiment is optional for a 2-minute job
-            logger.warning("News refresh for new bars failed (%s). Forward-filled scores kept.", exc)
+    if skip_news:
+        persist_enhanced_panel(panel)
+        return panel
+
+    news_end = pd.Timestamp(now.replace(tzinfo=None)) if getattr(now, "tzinfo", None) else pd.Timestamp(now)
+    if not panel.empty:
+        news_end = max(news_end, pd.Timestamp(panel["datetime"].max()))
+    span = max(int(news_days if news_days is not None else lookback_days), 7)
+    news_start = news_end - pd.Timedelta(days=span)
+    logger.info(
+        "Refreshing Alpha Vantage NEWS_SENTIMENT %s → %s (force_fetch=%s, education 75/min).",
+        news_start.date(),
+        news_end.date(),
+        force_news_fetch,
+    )
+    try:
+        from src.news_loader import load_all_news
+
+        news = load_all_news(news_start, news_end, force_fetch=force_news_fetch)
+        if news is not None and not news.empty:
+            panel = _merge_recent_news(panel, news, news_start)
+        else:
+            logger.warning("News refresh returned empty. Keeping existing news_score (ffill on new Futu bars).")
+    except Exception as exc:  # noqa: BLE001 — sentiment is optional if AV is down
+        logger.warning("News refresh failed (%s). Forward-filled scores kept.", exc)
 
     persist_enhanced_panel(panel)
     return panel
@@ -281,6 +325,135 @@ def load_reference_calmars(output_dir: Path) -> tuple[float, float]:
     return trading, seed
 
 
+def _default_live_best() -> dict:
+    return {
+        "window": TRADING_GOLDEN_WINDOW,
+        "start": "2026-07-09",
+        "end": TRADING_GOLDEN_END,
+        "calmar": TRADING_GOLDEN_CALMAR,
+        "zip": TRADING_GOLDEN_ZIP,
+        "source_zip": "checkpoint_2026-08-12.zip",
+        "updated_at": "",
+    }
+
+
+def load_live_best(output_dir: Path) -> dict:
+    """Calmar bar for promotion: whatever is currently in best_model.zip.
+
+    Seeded from Window 113 on first run. Updated only after an explicit Promote
+    (Telegram button or ``--promote-zip``).
+    """
+    path = output_dir / LIVE_BEST_JSON
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            calmar = float(data.get("calmar", TRADING_GOLDEN_CALMAR))
+            if math.isfinite(calmar):
+                data["calmar"] = calmar
+                return data
+        except (OSError, ValueError, TypeError) as exc:
+            logger.warning("Could not read %s (%s). Falling back to Window 113.", path, exc)
+    live = _default_live_best()
+    hist = _history_lookup(output_dir, TRADING_GOLDEN_WINDOW, TRADING_GOLDEN_END)
+    if hist:
+        if "calmar" in hist and _finite(hist["calmar"]):
+            live["calmar"] = float(hist["calmar"])
+        if "start" in hist and pd.notna(hist["start"]):
+            live["start"] = str(hist["start"])
+        if "end" in hist and pd.notna(hist["end"]):
+            live["end"] = str(hist["end"])
+        if "window" in hist and _finite(hist["window"]):
+            live["window"] = int(hist["window"])
+    save_live_best(output_dir, live)
+    return live
+
+
+def save_live_best(output_dir: Path, live: dict) -> Path:
+    path = output_dir / LIVE_BEST_JSON
+    payload = dict(live)
+    payload["updated_at"] = datetime.now(tz=HK_TZ).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    logger.info(
+        "Live best bar: W%s  %s  Calmar %.4f  (source %s)",
+        payload.get("window"),
+        payload.get("end"),
+        float(payload.get("calmar", float("nan"))),
+        payload.get("source_zip") or payload.get("zip"),
+    )
+    return path
+
+
+def _live_log_row(live: dict) -> dict:
+    row = {col: None for col in FINETUNE_LOG_COLUMNS}
+    row.update(
+        {
+            "run_id": str(live.get("updated_at") or "live"),
+            "role": "live_best",
+            "window": live.get("window"),
+            "start": live.get("start"),
+            "end": live.get("end"),
+            "calmar": live.get("calmar"),
+            "zip": TRADING_GOLDEN_ZIP,
+            "beats_trading_golden": None,
+            "beats_live_best": None,
+        }
+    )
+    return row
+
+
+def upsert_live_best_row(output_dir: Path, live: dict) -> None:
+    """Replace the pinned ``live_best`` row; leave W113/W118 and daily rows alone."""
+    path = output_dir / FINETUNE_LOG_NAME
+    if not path.exists():
+        return
+    existing = pd.read_csv(path).reindex(columns=FINETUNE_LOG_COLUMNS)
+    if "role" not in existing.columns:
+        return
+    pinned_hist = existing.loc[existing["role"].isin(["trading_golden", "training_seed"])]
+    rest = existing.loc[~existing["role"].isin(PINNED_ROLES)]
+    live_df = pd.DataFrame([_live_log_row(live)]).reindex(columns=FINETUNE_LOG_COLUMNS)
+    combined = pd.concat([pinned_hist, live_df, rest], ignore_index=True)
+    for col in ("window", "n_bars", "timesteps", "ppo_updates"):
+        if col in combined.columns:
+            combined[col] = pd.to_numeric(combined[col], errors="coerce").astype("Int64")
+    combined.to_csv(path, index=False)
+
+
+def apply_promotion(
+    output_dir: Path,
+    zip_path: Path,
+    *,
+    row: WindowMetrics | None,
+    live_before: dict | None = None,
+) -> dict:
+    """Copy ``zip_path`` onto ``best_model.zip`` and raise the live Calmar bar."""
+    src = Path(zip_path)
+    if not src.exists():
+        raise FileNotFoundError(f"Cannot promote missing zip: {src}")
+    dest = output_dir / TRADING_GOLDEN_ZIP
+    shutil.copy2(src, dest)
+    live = {
+        "window": int(row.window) if row is not None else None,
+        "start": str(row.start) if row is not None else "",
+        "end": str(row.end) if row is not None else "",
+        "calmar": float(row.calmar) if row is not None and _finite(row.calmar) else float("nan"),
+        "zip": TRADING_GOLDEN_ZIP,
+        "source_zip": src.name,
+    }
+    save_live_best(output_dir, live)
+    upsert_live_best_row(output_dir, load_live_best(output_dir))
+    logger.info("Promoted %s -> %s. Next fine-tune compares against Calmar %.4f.", src.name, dest, live["calmar"])
+    before = float((live_before or {}).get("calmar", TRADING_GOLDEN_CALMAR))
+    send_telegram_alert(
+        "AirAire: promoted to best_model.zip\n"
+        f"Source: {src.name}\n"
+        f"New live Calmar: {live['calmar']:.4f} (was {before:.4f})\n"
+        "Paper trading will load this zip on the next inference start."
+    )
+    return live
+
+
 def _finite(value: object) -> bool:
     try:
         return math.isfinite(float(value))  # type: ignore[arg-type]
@@ -309,6 +482,7 @@ def _golden_log_row(
             "calmar": calmar,
             "zip": zip_name,
             "beats_trading_golden": None,
+            "beats_live_best": None,
         }
     )
     if history:
@@ -337,9 +511,9 @@ def _metrics_log_row(
     *,
     run_id: str,
     zip_name: str,
-    trading_calmar: float,
+    live_calmar: float,
 ) -> dict:
-    beats = bool(_finite(row.calmar) and float(row.calmar) > float(trading_calmar))
+    beats = bool(_finite(row.calmar) and float(row.calmar) > float(live_calmar))
     payload = {col: "" for col in FINETUNE_LOG_COLUMNS}
     payload.update({k: v for k, v in row.__dict__.items() if k in payload})
     payload.update(
@@ -348,6 +522,7 @@ def _metrics_log_row(
             "role": "finetune",
             "zip": zip_name,
             "beats_trading_golden": beats,
+            "beats_live_best": beats,
         }
     )
     return payload
@@ -357,25 +532,28 @@ def append_finetune_log(
     output_dir: Path,
     new_rows: list[dict],
     *,
-    trading_calmar: float,
-    seed_calmar: float,
+    w113_calmar: float,
+    w118_calmar: float,
+    live: dict,
 ) -> Path:
-    """Append today's rows. Goldens (W113, W118) stay pinned as the first two data rows.
+    """Append today's rows.
 
-    ``training_log_history.csv`` is left chronological — we do **not** move 113/118
-    around in that file. This dedicated log is the one you open for promotion.
+    Pinned at the top (never shuffled into history):
+      1. trading_golden — original Window 113 (museum)
+      2. training_seed  — original Window 118
+      3. live_best      — whatever best_model.zip currently is (moves on Promote)
     """
     path = output_dir / FINETUNE_LOG_NAME
     hist_113 = _history_lookup(output_dir, TRADING_GOLDEN_WINDOW, TRADING_GOLDEN_END)
     hist_118 = _history_lookup(output_dir, TRAINING_SEED_WINDOW, TRAINING_SEED_END)
-    goldens = [
+    history_pins = [
         _golden_log_row(
             role="trading_golden",
             window=TRADING_GOLDEN_WINDOW,
             start="2026-07-09",
             end=TRADING_GOLDEN_END,
-            calmar=trading_calmar,
-            zip_name=TRADING_GOLDEN_ZIP,
+            calmar=w113_calmar,
+            zip_name="checkpoint_2026-08-12.zip",
             history=hist_113,
         ),
         _golden_log_row(
@@ -383,7 +561,7 @@ def append_finetune_log(
             window=TRAINING_SEED_WINDOW,
             start="2026-07-15",
             end=TRAINING_SEED_END,
-            calmar=seed_calmar,
+            calmar=w118_calmar,
             zip_name=TRAINING_SEED_ZIP,
             history=hist_118,
         ),
@@ -395,11 +573,13 @@ def append_finetune_log(
         if "role" not in existing.columns:
             existing["role"] = "finetune"
         existing = existing.reindex(columns=FINETUNE_LOG_COLUMNS)
-        golden_df = existing.loc[existing["role"].isin(["trading_golden", "training_seed"])]
-        rest = existing.loc[~existing["role"].isin(["trading_golden", "training_seed"])]
-        if golden_df.empty:
-            golden_df = pd.DataFrame(goldens).reindex(columns=FINETUNE_LOG_COLUMNS)
-        # Dedup today's append against what is already on disk.
+        hist_df = existing.loc[existing["role"].isin(["trading_golden", "training_seed"])]
+        live_df = existing.loc[existing["role"] == "live_best"]
+        rest = existing.loc[~existing["role"].isin(PINNED_ROLES)]
+        if hist_df.empty:
+            hist_df = pd.DataFrame(history_pins).reindex(columns=FINETUNE_LOG_COLUMNS)
+        if live_df.empty:
+            live_df = pd.DataFrame([_live_log_row(live)]).reindex(columns=FINETUNE_LOG_COLUMNS)
         if not incoming.empty and not rest.empty:
             key_cols = [c for c in ("run_id", "window", "start", "end") if c in rest.columns]
             if key_cols:
@@ -409,10 +589,14 @@ def append_finetune_log(
                     for rec in zip(*(incoming[c].astype(str) for c in key_cols))
                 ]
                 incoming = incoming.loc[mask]
-        combined = pd.concat([golden_df, rest, incoming], ignore_index=True)
+        combined = pd.concat([hist_df, live_df, rest, incoming], ignore_index=True)
     else:
         combined = pd.concat(
-            [pd.DataFrame(goldens).reindex(columns=FINETUNE_LOG_COLUMNS), incoming],
+            [
+                pd.DataFrame(history_pins).reindex(columns=FINETUNE_LOG_COLUMNS),
+                pd.DataFrame([_live_log_row(live)]).reindex(columns=FINETUNE_LOG_COLUMNS),
+                incoming,
+            ],
             ignore_index=True,
         )
 
@@ -424,7 +608,7 @@ def append_finetune_log(
     path.parent.mkdir(parents=True, exist_ok=True)
     combined.to_csv(path, index=False)
     logger.info(
-        "Appended %d fine-tune row(s) -> %s (file rows=%d; W113/W118 stay at the top)",
+        "Appended %d fine-tune row(s) -> %s (file rows=%d; W113/W118 history + live_best pinned)",
         len(incoming),
         path,
         len(combined),
@@ -434,87 +618,129 @@ def append_finetune_log(
 
 def report_promotion(
     *,
+    output_dir: Path,
     row: WindowMetrics | None,
     zip_path: Path | None,
-    trading_calmar: float,
-    seed_calmar: float,
+    live: dict,
+    w113_calmar: float,
+    w118_calmar: float,
     notify: bool,
+    promote_wait_seconds: int,
 ) -> None:
-    """Terminal scoreboard + Telegram only when the new Calmar beats Window 113.
+    """Terminal scoreboard vs the *live* best_model, then optional Telegram Promote/Keep.
 
-    Never copies ``best_model.zip``. The operator still promotes by hand.
+    Window 113/118 stay in the log as history. The hurdle is ``live['calmar']``.
+    ``best_model.zip`` is copied only if you press Promote (or pass ``--promote-zip`` later).
     """
+    live_calmar = float(live.get("calmar", TRADING_GOLDEN_CALMAR))
     new_calmar = float(row.calmar) if row is not None and _finite(row.calmar) else float("nan")
-    beats = bool(_finite(new_calmar) and new_calmar > trading_calmar)
+    beats = bool(_finite(new_calmar) and new_calmar > live_calmar)
     zip_name = zip_path.name if zip_path is not None else "(not saved)"
     win_label = f"W{row.window}  {row.start} → {row.end}" if row is not None else "n/a"
+    live_label = f"W{live.get('window')}  end {live.get('end')}"
 
     logger.info("============================================================")
-    logger.info("PROMOTION CHECK  (best_model.zip is never overwritten)")
+    logger.info("PROMOTION CHECK  (best_model.zip changes only if you Promote)")
     logger.info(
-        "  Trading golden  W%d  end %s  Calmar %.4f  (%s)",
-        TRADING_GOLDEN_WINDOW,
+        "  History W113     end %s  Calmar %.4f  (original champion, museum)",
         TRADING_GOLDEN_END,
-        trading_calmar,
-        TRADING_GOLDEN_ZIP,
+        w113_calmar,
     )
     logger.info(
-        "  Training seed   W%d  end %s  Calmar %.4f  (%s)",
-        TRAINING_SEED_WINDOW,
+        "  History W118     end %s  Calmar %.4f  (training seed)",
         TRAINING_SEED_END,
-        seed_calmar,
-        TRAINING_SEED_ZIP,
+        w118_calmar,
+    )
+    logger.info(
+        "  LIVE best_model  %s  Calmar %.4f  (%s)",
+        live_label,
+        live_calmar,
+        live.get("source_zip") or live.get("zip"),
     )
     if row is None:
         logger.info("  This fine-tune  %s  Calmar n/a  (%s)", win_label, zip_name)
-        logger.info("  Verdict: no usable window (collapse / NaN). Keep %s.", TRADING_GOLDEN_ZIP)
+        logger.info("  Verdict: no usable window. Keep live best_model.zip.")
     else:
-        logger.info(
-            "  This fine-tune  %s  Calmar %.4f  (%s)",
-            win_label,
-            new_calmar,
-            zip_name,
-        )
+        logger.info("  This fine-tune  %s  Calmar %.4f  (%s)", win_label, new_calmar, zip_name)
         if beats:
             logger.info(
-                "  Verdict: BEATS Window 113 (%.4f > %.4f). "
-                "If you want it live, copy %s over %s yourself.",
+                "  Verdict: BEATS live best (%.4f > %.4f). Waiting for Telegram Promote / Keep.",
                 new_calmar,
-                trading_calmar,
-                zip_name,
-                TRADING_GOLDEN_ZIP,
+                live_calmar,
             )
         else:
             logger.info(
-                "  Verdict: KEEP %s (new %.4f is not above %.4f). No Telegram.",
-                TRADING_GOLDEN_ZIP,
+                "  Verdict: KEEP live best_model.zip (new %.4f is not above %.4f). No Telegram.",
                 new_calmar,
-                trading_calmar,
+                live_calmar,
             )
     logger.info("============================================================")
 
-    if not beats or not notify:
-        if beats and not notify:
-            logger.info("Telegram skipped (--no-telegram).")
+    if not beats or zip_path is None or row is None:
         return
-    if zip_path is None or row is None:
+    cli = f"python -m src.finetune_latest --promote-zip {zip_path}"
+    if not notify:
+        logger.info("Telegram skipped (--no-telegram). Later: %s", cli)
+        return
+    if telegram_auth() is None:
+        logger.warning("Telegram unset. Live best unchanged. Later: %s", cli)
+        return
+    if promote_wait_seconds <= 0:
+        send_telegram_alert(
+            "AirAire fine-tune beat the live best_model\n"
+            f"New: W{row.window}  {row.start} → {row.end}  Calmar {new_calmar:.4f}\n"
+            f"Live: {live_label}  Calmar {live_calmar:.4f}\n"
+            f"Zip: {zip_path.name}\n"
+            "best_model.zip was NOT changed (wait disabled).\n"
+            f"To promote: {cli}"
+        )
         return
 
-    message = (
-        "AirAire fine-tune: Calmar beat Window 113\n"
+    markup = {
+        "inline_keyboard": [
+            [
+                {"text": "Promote to best_model", "callback_data": TELEGRAM_CALLBACK_PROMOTE},
+                {"text": "Keep current", "callback_data": TELEGRAM_CALLBACK_KEEP},
+            ]
+        ]
+    }
+    sent = send_telegram_alert(
+        "AirAire fine-tune beat the live best_model\n"
         f"New: W{row.window}  {row.start} → {row.end}  Calmar {new_calmar:.4f}\n"
-        f"Golden: W{TRADING_GOLDEN_WINDOW}  {TRADING_GOLDEN_END}  Calmar {trading_calmar:.4f}\n"
-        f"Zip: {zip_path}\n"
-        f"best_model.zip was NOT changed.\n"
-        f"To promote: copy {zip_path.name} over best_model.zip"
+        f"Live: {live_label}  Calmar {live_calmar:.4f}\n"
+        f"Zip: {zip_path.name}\n"
+        f"Press Promote to copy this zip onto best_model.zip and raise the bar.\n"
+        f"Press Keep (or wait {promote_wait_seconds}s) to leave trading as-is.\n"
+        f"Later: {cli}",
+        reply_markup=markup,
     )
-    sent = send_telegram_alert(message)
-    if sent:
-        logger.info("Telegram promotion ping sent.")
+    if not sent:
+        logger.warning("Telegram prompt failed. Live best unchanged. Later: %s", cli)
+        return
+
+    logger.info(
+        "Waiting up to %ss for Telegram Promote / Keep (Ctrl+C keeps the current best_model)...",
+        promote_wait_seconds,
+    )
+    try:
+        choice = wait_telegram_callback(
+            timeout_seconds=promote_wait_seconds,
+            allowed=(TELEGRAM_CALLBACK_PROMOTE, TELEGRAM_CALLBACK_KEEP),
+        )
+    except KeyboardInterrupt:
+        logger.info("Wait interrupted. Live best_model.zip unchanged.")
+        send_telegram_alert("AirAire: promote wait cancelled. best_model.zip unchanged.")
+        return
+
+    if choice == TELEGRAM_CALLBACK_PROMOTE:
+        apply_promotion(output_dir, zip_path, row=row, live_before=live)
+    elif choice == TELEGRAM_CALLBACK_KEEP:
+        logger.info("Telegram Keep: live best_model.zip unchanged.")
+        send_telegram_alert("AirAire: Keep received. best_model.zip unchanged.")
     else:
-        logger.warning(
-            "Telegram ping not delivered (set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env). "
-            "The terminal verdict above is the source of truth."
+        logger.info("No Telegram answer in %ss. Live best unchanged. Later: %s", promote_wait_seconds, cli)
+        send_telegram_alert(
+            f"AirAire: no Promote/Keep in {promote_wait_seconds}s. best_model.zip unchanged.\n{cli}"
         )
 
 
@@ -528,8 +754,11 @@ def finetune(
     device: str = "cuda",
     refresh_futu: bool = True,
     lookback_days: int = 30,
-    force_news_fetch: bool = False,
+    force_news_fetch: bool = True,
+    skip_news: bool = False,
+    news_days: int | None = None,
     notify_telegram: bool = True,
+    promote_wait_seconds: int = DEFAULT_PROMOTE_WAIT_SECONDS,
 ) -> list[WindowMetrics]:
     if not MIN_WINDOWS <= int(n_windows) <= MAX_WINDOWS:
         raise ValueError(f"--windows must be {MIN_WINDOWS}–{MAX_WINDOWS} (got {n_windows}).")
@@ -563,6 +792,8 @@ def finetune(
             refresh_futu=refresh_futu,
             lookback_days=lookback_days,
             force_news_fetch=force_news_fetch,
+            skip_news=skip_news,
+            news_days=news_days,
         )
         if panel.empty:
             raise FileNotFoundError("Enhanced panel is empty after Futu overlay.")
@@ -678,32 +909,38 @@ def finetune(
 
             _close_env(vec_env)
 
-        trading_calmar, seed_calmar = load_reference_calmars(output_dir)
+        w113_calmar, w118_calmar = load_reference_calmars(output_dir)
+        live = load_live_best(output_dir)
+        live_calmar = float(live.get("calmar", TRADING_GOLDEN_CALMAR))
         log_rows = [
             _metrics_log_row(
                 m,
                 run_id=run_id,
                 zip_name=last_saved.name if last_saved is not None else "",
-                trading_calmar=trading_calmar,
+                live_calmar=live_calmar,
             )
             for m in metrics
         ]
         append_finetune_log(
             output_dir,
             log_rows,
-            trading_calmar=trading_calmar,
-            seed_calmar=seed_calmar,
+            w113_calmar=w113_calmar,
+            w118_calmar=w118_calmar,
+            live=live,
         )
         report_promotion(
+            output_dir=output_dir,
             row=last_saved_row,
             zip_path=last_saved,
-            trading_calmar=trading_calmar,
-            seed_calmar=seed_calmar,
+            live=live,
+            w113_calmar=w113_calmar,
+            w118_calmar=w118_calmar,
             notify=notify_telegram,
+            promote_wait_seconds=promote_wait_seconds,
         )
         if last_saved is not None:
             logger.info(
-                "Fine-tune complete. Trading still uses %s ; new weights are %s",
+                "Fine-tune complete. Paper-trading zip is %s. Candidate weights: %s",
                 output_dir / "best_model.zip",
                 last_saved,
             )
@@ -712,6 +949,67 @@ def finetune(
         return metrics
     finally:
         restore_log()
+
+
+def _row_from_finetune_log(output_dir: Path, zip_name: str) -> WindowMetrics | None:
+    path = output_dir / FINETUNE_LOG_NAME
+    if not path.exists():
+        return None
+    df = pd.read_csv(path)
+    if df.empty or "zip" not in df.columns:
+        return None
+    hit = df.loc[df["zip"].astype(str) == zip_name]
+    if "role" in df.columns:
+        fin = hit.loc[hit["role"].astype(str) == "finetune"]
+        if not fin.empty:
+            hit = fin
+    if hit.empty:
+        return None
+    last = hit.iloc[-1]
+    try:
+        return WindowMetrics(
+            window=int(last.get("window", 0) or 0),
+            start=str(last.get("start", "")),
+            end=str(last.get("end", "")),
+            n_bars=int(last.get("n_bars", 0) or 0),
+            timesteps=int(last.get("timesteps", 0) or 0),
+            cumulative_return=float(last.get("cumulative_return", 0) or 0),
+            sharpe=float(last.get("sharpe", 0) or 0),
+            max_drawdown=float(last.get("max_drawdown", 0) or 0),
+            final_equity=float(last.get("final_equity", 0) or 0),
+            news_coverage=float(last.get("news_coverage", 0) or 0),
+            calmar=float(last["calmar"]),
+            approx_kl=float(last.get("approx_kl", float("nan"))),
+            entropy_loss=float(last.get("entropy_loss", float("nan"))),
+            ppo_updates=int(last.get("ppo_updates", 0) or 0),
+        )
+    except (TypeError, ValueError):
+        return None
+
+
+def promote_zip_cli(output_dir: Path, zip_path: Path) -> None:
+    """Manual Promote after you missed the Telegram wait (or skipped Telegram)."""
+    output_dir = Path(output_dir)
+    src = Path(zip_path)
+    if not src.exists():
+        alt = output_dir / src.name
+        if alt.exists():
+            src = alt
+        else:
+            raise FileNotFoundError(f"--promote-zip not found: {zip_path}")
+    live = load_live_best(output_dir)
+    row = _row_from_finetune_log(output_dir, src.name)
+    if row is None:
+        logger.warning("No finetune_log row for %s. Promoting with unknown Calmar is refused.", src.name)
+        raise SystemExit(2)
+    live_calmar = float(live.get("calmar", TRADING_GOLDEN_CALMAR))
+    if _finite(row.calmar) and float(row.calmar) <= live_calmar:
+        logger.warning(
+            "This zip Calmar %.4f does not beat live %.4f. Promoting anyway because --promote-zip is explicit.",
+            float(row.calmar),
+            live_calmar,
+        )
+    apply_promotion(output_dir, src, row=row, live_before=live)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -740,7 +1038,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--no-futu",
         action="store_true",
-        help="Skip the OpenD 10-min refresh (use enhanced_data.parquet as-is).",
+        help="Skip the OpenD 10-min refresh (news refresh still runs unless --skip-news).",
     )
     p.add_argument(
         "--lookback-days",
@@ -748,11 +1046,44 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=30,
         help="Max calendar days to pull from Futu when filling an offline gap (default: 30).",
     )
-    p.add_argument("--force-news-fetch", action="store_true", help="Re-query Alpha Vantage for newly added bars.")
+    p.add_argument(
+        "--news-days",
+        type=int,
+        default=None,
+        help="Calendar days of Alpha Vantage NEWS_SENTIMENT to re-query before PPO (default: same as --lookback-days).",
+    )
+    p.add_argument(
+        "--skip-news",
+        action="store_true",
+        help="Do not call Alpha Vantage; keep existing news_score on the parquet.",
+    )
+    p.add_argument(
+        "--cache-news",
+        action="store_true",
+        help="Skip the AV API if the local cache already covers the news window.",
+    )
+    p.add_argument(
+        "--force-news-fetch",
+        action="store_true",
+        help="Re-query Alpha Vantage even if cache covers the range (this is now the default).",
+    )
     p.add_argument(
         "--no-telegram",
         action="store_true",
-        help="Do not ping Telegram even if the new Calmar beats Window 113.",
+        help="Do not ping Telegram or wait for Promote/Keep even if Calmar beats the live best.",
+    )
+    p.add_argument(
+        "--promote-wait",
+        type=int,
+        default=DEFAULT_PROMOTE_WAIT_SECONDS,
+        metavar="SECONDS",
+        help="Seconds to wait for a Telegram Promote/Keep tap after a beating run (default: 600). 0 = notify only.",
+    )
+    p.add_argument(
+        "--promote-zip",
+        type=Path,
+        default=None,
+        help="Copy this zip onto best_model.zip now and raise the live Calmar bar (skips training).",
     )
     return p.parse_args(argv)
 
@@ -760,6 +1091,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 if __name__ == "__main__":
     freeze_support()
     args = parse_args()
+    if args.promote_zip is not None:
+        promote_zip_cli(args.output, args.promote_zip)
+        sys.exit(0)
     finetune(
         n_windows=args.windows,
         window_days=args.window_days,
@@ -769,6 +1103,9 @@ if __name__ == "__main__":
         device=args.device,
         refresh_futu=not args.no_futu,
         lookback_days=args.lookback_days,
-        force_news_fetch=args.force_news_fetch,
+        force_news_fetch=(not args.cache_news) or args.force_news_fetch,
+        skip_news=args.skip_news,
+        news_days=args.news_days,
         notify_telegram=not args.no_telegram,
+        promote_wait_seconds=args.promote_wait,
     )
