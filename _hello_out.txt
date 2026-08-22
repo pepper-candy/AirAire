@@ -1,2 +1,0 @@
-exe=C:\Users\mongk\AppData\Local\Programs\Python\Python312\python.exe
-cwd=C:\Users\mongk\Desktop\airaire
