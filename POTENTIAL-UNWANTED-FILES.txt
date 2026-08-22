@@ -1,0 +1,253 @@
+AirAire — potential unwanted files
+Generated: 2026-08-23
+Context: fresh folder pull after a long git conflict / filter-repo / force-push fight.
+
+Applied 2026-08-23: deleted Group A, deleted Group B workflow, collapsed
+requirements to a single requirements.txt (old requirements_new.txt contents).
+Guides, .cursor/plans, Group E/F/G kept.
+"Unwanted" here means leftover from chaos, superseded, or one-shot debug — not "safe to wipe the project".
+
+How this repo actually works now
+--------------------------------
+Live sources of truth (do not treat older markdown as a to-do list):
+
+  guide/PHRASE-4-EXECUTION-&-DAILY-WORK.md   paper trading, bats, goldens, Promote
+  guide/PHRASE-5.md                          24/7 read-only Vercel dashboard
+
+Daily runtime (keep):
+
+  src/inference.py           paper trader
+  src/finetune_latest.py     overnight 1-window GPU fine-tune
+  src/train_gpu_v2.py        imported by fine-tune (hyperparams / collapse guards)
+  src/train.py               imported by both trainers (windows, eval, env factory)
+  src/trading_env.py
+  src/data_loader.py
+  src/news_loader.py
+  src/dashboard_push.py
+  src/utils.py
+  execution/*.bat
+  dashboard/                 Next.js site (except the leftover files listed below)
+  data/raw/bloomberg/        10-min price base
+  data/raw/news/             articles_*.csv + news_*.csv + fetch_meta.json  (BOTH csv types are used)
+  models/news_gpu_v2/        live_best.json, finetune_log.csv, training_log_history.csv
+                             PLUS the three golden zips (those zips are MISSING after this pull)
+
+========================================================================
+A. SAFE TO DELETE — leftover debug dumps from the git / agent chaos
+========================================================================
+These look like Cursor/shell smoke tests, not project code. Several still mention
+the OLD folder C:\Users\mongk\Desktop\airaire.
+
+  _hello_out.txt
+  _shell_check.txt
+  _train_smoke.txt
+  _tz_check.out
+  models/train_smoke.txt
+  dashboard/_git_test.txt          (old `git status` dump; lists __pycache__ and leftovers)
+  dashboard/_shell_test.txt        (just says "hello-from-shell")
+  dashboard/_icon_status.txt       (`dir` of a dashboard/public/icons folder that is not here)
+  dashboard/chevron-up.svg         orphan SVG at dashboard root; nothing in the Next app imports it
+  data/logs/_seed_news_probe.txt
+  data/logs/_seed_news_probe_out.txt   (probe of the OLD airaire folder)
+
+========================================================================
+B. DANGEROUS leftover — do not leave this armed
+========================================================================
+  .github/workflows/main.yml
+
+  Name: "Force Reset Branch"
+  On: workflow_dispatch
+  Action: hard-reset main to commit 15ac209 and force-push.
+
+  This is almost certainly from the conflict fight. If someone clicks it on GitHub,
+  it will wipe current main. Either delete the workflow or disable it.
+
+========================================================================
+C. SUPERSEDED GUIDES — history only, not current instructions
+========================================================================
+PHRASE-4-EXECUTION already says: if any other file in guide/ disagrees, that page wins.
+PHRASE-5 says the same for the dashboard.
+
+Safe to archive or delete if you only want current ops docs.
+Keep if you want the story of how you got here.
+
+  guide/PHRASE-4.md
+      18 Aug snapshot. Banner says superseded. Still claims "news not implemented"
+      (false). PHRASE-4-EXECUTION lists this as history only.
+
+  guide/PHRASE-4-EXECUTION-&-DAILY-WORK_v1.md
+      Early draft of the runbook. Bat snippets are older (no pause-for-OpenD-login,
+      no Telegram Promote wait notes). Replaced by the file without _v1.
+
+  guide/PHRASE-3-deepseek_markdown_20260818_69d15a.md
+      DeepSeek sync from 18 Aug. Task was "write train.py" — already done.
+      PHRASE-4-EXECUTION: treat DeepSeek drafts as replaced.
+
+  guide/GPU-TRAIN-CHANGE.md
+      Task prompt to create src/train_gpu.py. Done.
+
+  guide/TRAINING-OPTIMIZATION.md
+      Task prompt to create src/train_gpu_v2.py. Done.
+
+  guide/EVALUATION-POLICY-FIX.md
+      Task prompt to fix evaluate_policy() and restart training. Done.
+      PHRASE-4-EXECUTION: history only. Also talks about retraining from scratch
+      — that is now forbidden.
+
+  guide/TRAINING-RESULTS-20260819.md
+      Post-mortem of the first GPU 118-window run (Sharpe always 0, entropy collapse).
+      PHRASE-4-EXECUTION: history only.
+
+  guide/TO-FIGMA-PROMPT.md
+      One-off tweak prompt for the dashboard UI. Dashboard already exists.
+
+  guide/FIGMA-MAKE-DASHBOARD-PROMPT.md
+      One-off Figma Make prompt. Dashboard already exists.
+
+  guide/PHRASE-5-CROSSCHECK.md
+      After-commit checklist for e0bf7a2 / filter-repo / force-push.
+      Useful as a diary of the git fight; not needed for daily work.
+
+  .cursor/plans/phase_5_dashboard_98933837.plan.md
+  .cursor/plans/vercel_dashboard_guide_1b431511.plan.md
+      Cursor plan files. Work is implemented. Safe to drop from the repo.
+
+KEEP these guides (not unwanted):
+
+  guide/PLAN.md                              origin story / universe / architecture
+  guide/PHRASE-4-EXECUTION-&-DAILY-WORK.md   current paper-trade runbook
+  guide/PHRASE-4-FUTURE-FINETUNE-GUIDE.md    entropy-collapse / resurrection story
+  guide/PHRASE-5.md                          current dashboard runbook
+
+========================================================================
+D. REQUIREMENTS — done 2026-08-23
+========================================================================
+Deleted old requirements.txt (streamlit/finrl) and requirements_train.txt.
+Renamed requirements_new.txt -> requirements.txt (torch 2.0.1 / SB3 2.0.0).
+note.txt now says: pip install -r requirements.txt
+
+KEEP:
+
+  requirements.txt
+  dashboard/package.json   Next app
+
+========================================================================
+E. OLD TRAINING MUSEUM — logs only, no golden zips
+========================================================================
+PHRASE-4 says leave models/news_gpu/ alone and treat news_gpu_v2 as live.
+These folders are old run logs moved under models/old/. Safe to zip off-repo
+if you want a smaller tree. Do not confuse them with the live goldens.
+
+  models/old/pure_price/only-price-training-1000_updates-log.txt
+  models/old/news_barnB/log_20260818_barnB.txt
+  models/old/news_barnB/log_latest.txt
+  models/old/news_vm_cpu/log_20260819_vm_cpu.txt
+  models/old/news_vm_cpu/training_log_cpu.csv
+  models/old/news_gpu/log_20260819_vm_gpu.txt
+  models/old/news_gpu/log_20260819_last.txt
+  models/old/news_gpu/training_log.csv
+  models/old/news_vm_gpu_v2/training_log_history.csv
+      First GPU-v2 118-window history (run_id 20260820_000725).
+      The LIVE history is models/news_gpu_v2/training_log_history.csv
+      (resurrection windows 113–118 only). This old copy is museum.
+
+  models/news_gpu_v2/log_20260820_vm_gpu_v2_extra.txt
+      Extra terminal capture from the resurrection run. Optional keep.
+
+  logs/finetune_20260822_171138.txt
+  logs/finetune_20260822_174157.txt
+  logs/finetune_20260822_182415.txt
+      Same-day fine-tune attempts. Latest is logs/finetune_20260822_183056.txt
+      if you want to keep one.
+
+========================================================================
+F. ONE-SHOT TEST SCRIPTS — early wiring, not the live bot
+========================================================================
+Useful once. Not imported by inference / fine-tune.
+
+Keep if you still want a manual Futu / Telegram / AV ping.
+Delete if you only want the production loop.
+
+  test/enquiry-test.py              Futu LV1 snapshot ("congratulations")
+  test/realtime-price-test.py       tiny snapshot print
+  test/paper-trade-test.py          places a REAL Futu SIMULATE order (HK.00700 100 @ 445)
+  test/alpha-vantage-test.py        early AV key check
+  test/tg-bot-test.py               sends one Telegram text
+
+KEEP:
+
+  test/tg-promote-button-test.py    named in PHRASE-4-EXECUTION §5
+                                    (do not run it during a real Promote wait)
+
+========================================================================
+G. OLD TRAINING ENTRYPOINTS — keep in code, not daily use
+========================================================================
+Not junk. train.py is still imported. train_gpu.py is the frozen first GPU trainer.
+Do not run them into models/news_gpu_v2 (PHRASE-4 forbids a full retrain there).
+
+  src/train_gpu.py     superseded by train_gpu_v2; comments say leave it for history
+  src/train.py         KEEP — shared window / eval helpers
+
+========================================================================
+H. DO NOT DELETE — live / needed
+========================================================================
+  src/*  (except you may archive train_gpu.py later)
+  execution/run_trader.bat
+  execution/run_finetune.bat
+  execution/test_inference.bat
+  execution/predict_now.bat
+  dashboard/app/**
+  dashboard/components/**
+  dashboard/lib/**
+  dashboard/middleware.ts
+  dashboard/package.json
+  dashboard/package-lock.json
+  dashboard/tsconfig.json
+  dashboard/next.config.ts
+  dashboard/.env.example
+  .env.example
+  .gitignore
+  note.txt                          your personal VM cheat sheet
+  LICENSE
+  data/raw/bloomberg/*.csv
+  data/raw/news/articles_*.csv      raw headlines (dashboard + scoring)
+  data/raw/news/news_*.csv          10-min bar scores (training merge)
+  data/raw/news/fetch_meta.json
+  models/news_gpu_v2/live_best.json
+  models/news_gpu_v2/finetune_log.csv
+  models/news_gpu_v2/training_log_history.csv
+
+========================================================================
+I. MISSING AFTER THIS PULL — not junk; you still need them
+========================================================================
+These are required by the runbook but are not in this folder.
+They were probably gitignored, LFS-skipped, or left on the old Desktop\airaire / GPU VM.
+
+  models/news_gpu_v2/best_model.zip              inference loads this
+  models/news_gpu_v2/checkpoint_2026-08-12.zip   trading golden (museum copy)
+  models/news_gpu_v2/checkpoint_2026-08-18.zip   training seed for fine-tune
+  data/enhanced/enhanced_data.parquet            fine-tune / train load this
+  data/processed/unified_data.parquet            rebuilt from Bloomberg + news
+  data/raw/futu/latest/                          incremental Futu bars (created at runtime)
+  data/logs/trades.jsonl                         blotter (created at runtime)
+  state.pkl                                      trader resume (local only, gitignored)
+  .env                                           keys (local only, gitignored)
+  dashboard/.env.local                           Vercel/local site keys
+  README.md                                      PLAN.md still lists one; never added
+
+Copy the three zips + enhanced_data.parquet from the old folder or the GPU VM
+before you try run_trader / run_finetune from this new folder.
+
+========================================================================
+J. SUGGESTED DELETE ORDER (if you want a smaller tree)
+========================================================================
+1. Group A (debug txt/svg) — done 2026-08-23.
+2. .github/workflows/main.yml — done 2026-08-23.
+3. Group C drafts / Figma prompts / .cursor/plans — KEPT (history).
+4. requirements collapsed to requirements.txt — done 2026-08-23.
+5. models/old/** and older logs/finetune_* — KEPT (museum).
+6. Early test/*.py — KEPT.
+
+Do not delete Group H or the live news/bloomberg CSVs.
+Do not "clean" models/news_gpu_v2 goldens if you later copy them back.
+)
