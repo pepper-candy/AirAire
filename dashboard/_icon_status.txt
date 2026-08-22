@@ -1,0 +1,11 @@
+ Volume in drive C is Windows
+ Volume Serial Number is 5AA3-7855
+
+ Directory of c:\Users\mongk\Desktop\airaire\dashboard\public\icons
+
+22/08/2026  18:22    <DIR>          .
+22/08/2026  18:21    <DIR>          ..
+22/08/2026  18:24               379 chevron-down.svg
+22/08/2026  18:24               365 chevron-up.svg
+               2 File(s)            744 bytes
+               2 Dir(s)  308,759,998,464 bytes free

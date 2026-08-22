@@ -1,0 +1,147 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+const WELCOME = Array.from("WELCOME, VICTOR🍌");
+const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*";
+const SCRAMBLE_MS = 3000;
+const HOLD_MS = 3000;
+
+function randomGlyph(): string {
+  return GLYPHS[Math.floor(Math.random() * GLYPHS.length)] || "X";
+}
+
+function PlaneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        d="M22 2 11 13M22 2 15 22 11 13 2 9z"
+      />
+    </svg>
+  );
+}
+
+export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
+  const [wrong, setWrong] = useState(wrongInitially);
+  const [shake, setShake] = useState(0);
+  const [opening, setOpening] = useState(false);
+  const [gate, setGate] = useState("");
+  const [decode, setDecode] = useState<{ chars: string[]; locked: number }>({
+    chars: [],
+    locked: 0,
+  });
+  const gateRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!opening) {
+      return;
+    }
+    const started = performance.now();
+    let frame = 0;
+    const scramble = (now: number) => {
+      const elapsed = now - started;
+      if (elapsed >= SCRAMBLE_MS) {
+        setDecode({ locked: WELCOME.length, chars: WELCOME });
+        return;
+      }
+      const locked = Math.floor((elapsed / SCRAMBLE_MS) * WELCOME.length);
+      setDecode({
+        locked,
+        chars: WELCOME.map((ch, i) => (i < locked ? ch : randomGlyph())),
+      });
+      frame = window.requestAnimationFrame(scramble);
+    };
+    frame = window.requestAnimationFrame(scramble);
+    const lockId = window.setTimeout(() => {
+      window.cancelAnimationFrame(frame);
+      setDecode({ locked: WELCOME.length, chars: WELCOME });
+    }, SCRAMBLE_MS);
+    const goId = window.setTimeout(() => {
+      window.location.assign("/");
+    }, SCRAMBLE_MS + HOLD_MS);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(lockId);
+      window.clearTimeout(goId);
+    };
+  }, [opening]);
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (opening) {
+      return;
+    }
+    const form = event.currentTarget;
+    const body = new FormData(form);
+    let ok = false;
+    try {
+      const res = await fetch("/api/gate", {
+        method: "POST",
+        body,
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { ok?: boolean };
+        ok = Boolean(data.ok);
+      }
+    } catch {
+      ok = false;
+    }
+    if (!ok) {
+      setWrong(true);
+      setShake((n) => n + 1);
+      gateRef.current?.focus();
+      return;
+    }
+    setWrong(false);
+    setOpening(true);
+    setDecode({
+      locked: 0,
+      chars: WELCOME.map(() => randomGlyph()),
+    });
+  }
+
+  return (
+    <form className="login-card" method="post" action="/api/gate" onSubmit={onSubmit}>
+      <div className="eyebrow">AirAire</div>
+      <h1>Paper Book</h1>
+      <div key={shake} className={wrong && !opening ? "login-row is-wrong" : "login-row"}>
+        {opening ? (
+          <div className="gate-decode" aria-live="polite" aria-label="WELCOME, VICTOR">
+            {decode.chars.map((ch, i) => (
+              <span key={i} className={i < decode.locked ? "is-locked" : "is-scramble"}>
+                {ch === " " ? "\u00a0" : ch}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <input
+            ref={gateRef}
+            type="password"
+            name="gate"
+            autoFocus
+            required
+            placeholder="SECURITY_CODE"
+            value={gate}
+            onChange={(event) => setGate(event.target.value)}
+            className={wrong ? "gate-wrong" : undefined}
+            aria-invalid={wrong ? true : undefined}
+          />
+        )}
+        <button
+          type="submit"
+          className="login-send"
+          aria-label={opening ? "Opening blotter" : "Open blotter"}
+          disabled={opening}
+        >
+          <PlaneIcon />
+        </button>
+      </div>
+    </form>
+  );
+}

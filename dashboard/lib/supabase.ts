@@ -90,6 +90,7 @@ export function emptySnapshot(): Snapshot {
     last_bar_datetime: "",
     news_scores: {},
     headlines: {},
+    headline_baskets: [],
     fills: [],
     initial_cash: 1_000_000,
     pnl: 0,

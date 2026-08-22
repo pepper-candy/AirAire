@@ -16,6 +16,13 @@ export type Headline = {
   sentiment_score: number;
 };
 
+export type HeadlineBasket = {
+  id: string;
+  title: string;
+  members: string[];
+  headlines: Headline[];
+};
+
 export type Fill = {
   time: string;
   ticker: string;
@@ -37,6 +44,7 @@ export type Snapshot = {
   last_bar_datetime: string;
   news_scores: Record<string, number>;
   headlines: Record<string, Headline[]>;
+  headline_baskets?: HeadlineBasket[];
   fills: Fill[];
   initial_cash: number;
   pnl: number;
