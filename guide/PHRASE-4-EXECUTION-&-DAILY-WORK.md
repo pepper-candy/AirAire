@@ -267,11 +267,13 @@ Cadence (HK):
 
 ---
 
-## 6b. There is no live dashboard
+## 6b. Dashboard is Phase 5 (this page still wins for trading)
 
-`guide/PLAN.md` listed a Streamlit app (`dashboard/streamlit_app.py`). **It was never built.** There is no web page that streams news or positions.
+The Streamlit app in `guide/PLAN.md` was never built and is **rejected**. The friend-facing site is a **24/7 read-only** Vercel app. The VM pushes snapshots; Vercel never trades.
 
-What you have instead:
+Source of truth: [`guide/PHRASE-5.md`](PHRASE-5.md).
+
+What you have without opening Vercel:
 
 | Place | What you see |
 |---|---|
@@ -279,9 +281,10 @@ What you have instead:
 | Telegram | Fill alerts (when the trader actually sends a SIMULATE order); Promote/Keep after fine-tune |
 | Futu OpenD (SIMULATE account) | Paper positions and fills on Futu’s own UI |
 | `state.pkl` | Book the bot believes (cash, holdings, last news, last bar) |
+| `data/logs/trades.jsonl` | Local fill blotter (Phase 5; survives a failed push) |
 | `logs/` | Fine-tune / train text logs |
 
-Live news exists in the **process** (Alpha Vantage → `NewsPoller` → env `news_score`). It is not pushed to a dashboard. You read it in the console (and Telegram only after a real fill).
+Do not retrain, change Promote, or add `--dry-run` to `run_trader.bat` for the dashboard.
 
 ---
 

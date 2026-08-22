@@ -1,3 +1,16 @@
-"venv_demo/" 
+"venv_demo/"
 venv/
 venv_*/
+
+.env
+.env.*
+!.env.example
+
+dashboard/.env
+dashboard/.env.local
+dashboard/node_modules/
+dashboard/.next/
+
+data/logs/*.jsonl
+**/__pycache__/
+*.pyc

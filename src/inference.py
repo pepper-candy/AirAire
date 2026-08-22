@@ -46,7 +46,8 @@ from src.data_loader import (
     overlay_live_ohlcv,
     persist_enhanced_panel,
 )
-from src.news_loader import latest_ticker_score
+from src.dashboard_push import append_fill, push_live_snapshot
+from src.news_loader import latest_ticker_news
 from src.trading_env import TradingEnv
 from src.utils import (
     BEST_MODEL_PATH,
@@ -183,6 +184,10 @@ class NewsPoller:
         self.min_interval = min_interval
         self._last_call: dict[str, float] = {}
         self._cache: dict[str, float] = {t: 0.0 for t in CORE_TICKERS}
+        self._headlines: dict[str, list[dict[str, Any]]] = {t: [] for t in CORE_TICKERS}
+
+    def headlines_by_ticker(self) -> dict[str, list[dict[str, Any]]]:
+        return {t: list(self._headlines.get(t, [])) for t in CORE_TICKERS}
 
     def fetch(self, ticker: str, now: datetime | None = None) -> float:
         if ticker not in CORE_TICKERS:
@@ -214,7 +219,9 @@ class NewsPoller:
         return scores
 
     def _call_alpha_vantage(self, ticker: str) -> float:
-        return latest_ticker_score(ticker, api_key=self.api_key)
+        score, headlines = latest_ticker_news(ticker, api_key=self.api_key)
+        self._headlines[ticker] = headlines
+        return score
 
 
 # ---------------------------------------------------------------------------
@@ -383,14 +390,14 @@ class FutuPaperBroker:
                 out[code] = qty
         return out
 
-    def place_order(self, ticker: str, qty: int, price: float, is_buy: bool) -> bool:
-        """Paper order. Same call shape as paper-trade-test.py."""
+    def place_order(self, ticker: str, qty: int, price: float, is_buy: bool) -> tuple[bool, str]:
+        """Paper order. Same call shape as paper-trade-test.py. Returns (ok, order_id)."""
         if qty == 0:
-            return False
+            return False, ""
         side_name = "BUY" if is_buy else "SELL"
         if self.dry_run or self._trade_ctx(ticker) is None:
             logger.info("[DRY-RUN] place_order %s %s qty=%s price=%s", side_name, ticker, qty, price)
-            return True
+            return True, "dry-run"
         from futu import RET_OK, TrdEnv, TrdSide
 
         futu_limiter.acquire()
@@ -404,9 +411,9 @@ class FutuPaperBroker:
         if ret == RET_OK:
             order_id = data["order_id"].iloc[0] if "order_id" in data.columns else data
             logger.info("SIMULATE order ok %s %s qty=%s price=%s order_id=%s", side_name, ticker, qty, price, order_id)
-            return True
+            return True, str(order_id)
         logger.error("place_order failed %s %s: %s", side_name, ticker, data)
-        return False
+        return False, ""
 
 
 def round_to_lot(ticker: str, shares: float) -> int:
@@ -511,6 +518,15 @@ def _hk_now(now: datetime | None = None) -> datetime:
     if now.tzinfo is None:
         return now.replace(tzinfo=HK_TZ)
     return now.astimezone(HK_TZ)
+
+
+def _maybe_push_dashboard(state: BotState, news: NewsPoller, enabled: bool) -> None:
+    if not enabled:
+        return
+    try:
+        push_live_snapshot(state, headlines=news.headlines_by_ticker())
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Dashboard push skipped (%s). Trading continues.", exc)
 
 
 def catch_up_env(
@@ -621,6 +637,7 @@ def run_loop(
             "Safe to run while run_trader.bat is already up."
         )
     persist_state = not predict_now and not dry_run
+    push_dashboard = persist_state
 
     # §8: load state FIRST, before any order
     state = load_state()
@@ -673,6 +690,7 @@ def run_loop(
                         "Both HK and US cash sessions closed. Predict-now still scores the last completed bar (no orders)."
                     )
                 else:
+                    _maybe_push_dashboard(state, news, push_dashboard)
                     wait = min(seconds_until_next_open(), 300)
                     logger.info("Both HK and US cash sessions closed. HOLD. Sleeping %ss.", wait)
                     if once:
@@ -756,7 +774,7 @@ def run_loop(
                 if predict_now or not allow_orders or delta == 0:
                     continue
                 is_buy = delta > 0
-                ok = broker.place_order(ticker, abs(delta), px, is_buy=is_buy)
+                ok, order_id = broker.place_order(ticker, abs(delta), px, is_buy=is_buy)
                 if dry_run:
                     logger.info("[DRY-RUN] would %s %s qty=%s — book unchanged.", "BUY" if is_buy else "SELL", ticker, abs(delta))
                     continue
@@ -764,6 +782,17 @@ def run_loop(
                     state.holdings[ticker] = current + delta
                     state.cash -= delta * px
                     traded = True
+                    append_fill(
+                        {
+                            "time": datetime.now(tz=HK_TZ).isoformat(),
+                            "ticker": ticker,
+                            "side": "BUY" if is_buy else "SELL",
+                            "qty": int(abs(delta)),
+                            "price": float(px),
+                            "reason": reason,
+                            "order_id": order_id,
+                        }
+                    )
                     send_telegram_alert(reason)
 
             if allow_orders:
@@ -775,6 +804,7 @@ def run_loop(
                 save_state(state)
             else:
                 logger.info("No fills this cycle. Equity≈%.2f cash=%.2f", state.equity, state.cash)
+            _maybe_push_dashboard(state, news, push_dashboard)
 
             if predict_now:
                 logger.info("============================================================")

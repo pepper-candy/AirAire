@@ -560,14 +560,37 @@ def articles_to_bar_scores(
     return _normalize_news(pd.concat(frames, ignore_index=True))
 
 
-def latest_ticker_score(ticker: str, api_key: str | None = None, limit: int = NEWS_HEADLINE_WINDOW) -> float:
-    """One-shot live score used by ``NewsPoller``. Tries aliases; returns 0 on failure."""
+def _headline_rows(articles: pd.DataFrame, limit: int) -> list[dict[str, Any]]:
+    """Newest-first article rows for the dashboard. One AV call already fetched these."""
+    if articles is None or articles.empty:
+        return []
+    arts = articles.sort_values("datetime", ascending=False).head(int(limit))
+    rows: list[dict[str, Any]] = []
+    for rec in arts.to_dict(orient="records"):
+        rows.append(
+            {
+                "title": str(rec.get("title") or ""),
+                "source": str(rec.get("source") or ""),
+                "url": str(rec.get("url") or ""),
+                "time_published": str(rec.get("time_published") or ""),
+                "sentiment_score": float(rec.get("sentiment_score") or 0.0),
+            }
+        )
+    return rows
+
+
+def latest_ticker_news(
+    ticker: str,
+    api_key: str | None = None,
+    limit: int = NEWS_HEADLINE_WINDOW,
+) -> tuple[float, list[dict[str, Any]]]:
+    """Live score plus the headlines that produced it. One NEWS_SENTIMENT call."""
     if ticker not in CORE_TICKERS:
-        return 0.0
+        return 0.0, []
     key = api_key or _api_key()
     if not key:
         logger.warning("NewsPoller: ALPHAVANTAGE_API_KEY unset — sentiment for %s stays 0.", ticker)
-        return 0.0
+        return 0.0, []
     for symbol in av_symbols_for(ticker):
         params = {
             "function": "NEWS_SENTIMENT",
@@ -592,10 +615,17 @@ def latest_ticker_score(ticker: str, api_key: str | None = None, limit: int = NE
             continue
         scores = articles["sentiment_score"].to_numpy(dtype=np.float64)
         avg = float(np.clip(np.mean(scores) if len(scores) else 0.0, -1.0, 1.0))
+        headlines = _headline_rows(articles, limit)
         logger.info("NewsPoller %s (%s) score=%.3f n_headlines=%d", ticker, symbol, avg, len(scores))
-        return avg
+        return avg, headlines
     logger.warning("NewsPoller: no headlines for %s across aliases %s.", ticker, av_symbols_for(ticker))
-    return 0.0
+    return 0.0, []
+
+
+def latest_ticker_score(ticker: str, api_key: str | None = None, limit: int = NEWS_HEADLINE_WINDOW) -> float:
+    """One-shot live score used by ``NewsPoller``. Tries aliases; returns 0 on failure."""
+    score, _ = latest_ticker_news(ticker, api_key=api_key, limit=limit)
+    return score
 
 
 def load_all_news(
