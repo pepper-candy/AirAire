@@ -1,0 +1,19 @@
+name: Force Reset Branch
+on: workflow_dispatch
+jobs:
+  reset-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Reset to Commit
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git checkout main
+          git reset --hard 15ac209daa5e499ea5fe3476fe3f7d08924dbaa9
+          git push origin main --force
