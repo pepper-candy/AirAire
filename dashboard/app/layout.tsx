@@ -4,7 +4,7 @@ import "./globals.css";
 
 const sans = IBM_Plex_Sans({
   subsets: ["latin", "latin-ext"],
-  weight: ["300", "400", "500"],
+  weight: ["100", "300", "400", "500"],
   style: ["normal", "italic"],
   variable: "--font-sans",
   display: "swap",

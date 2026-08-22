@@ -93,7 +93,6 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
 
   return (
     <div className="login-stack">
-      <div className="eyebrow">AirAire</div>
       <form className="login-card" method="post" action="/api/gate" onSubmit={onSubmit}>
         <h1>Paper Book</h1>
         <div key={shake} className={wrong && !opening ? "login-row is-wrong" : "login-row"}>
@@ -121,6 +120,7 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
           )}
         </div>
       </form>
+      <div className="eyebrow">Created by AirAire</div>
     </div>
   );
 }

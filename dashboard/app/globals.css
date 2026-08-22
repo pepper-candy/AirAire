@@ -648,26 +648,33 @@ body.dragging {
   padding: 24px;
 }
 
-.login-card {
-  width: min(420px, 100%);
-  background: var(--bg-raise);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 28px 24px;
-  overflow: visible;
+.login-stack {
+  width: min(372px, 100%);
 }
 
-.login-card .eyebrow {
+.login-card {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px 24px;
+}
+
+.login-stack > .eyebrow {
+  margin-top: 8px;
+  padding-right: 8px;
+  text-align: right;
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .login-card h1 {
-  margin: 4px 0 0;
+  margin: 0;
+  font-family: var(--sans);
   font-size: 1.5rem;
-  font-weight: 500;
+  font-weight: 100;
 }
 
 .login-card p {
@@ -676,10 +683,8 @@ body.dragging {
 }
 
 .login-row {
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-  margin-top: 16px;
+  display: block;
+  margin-top: 8px;
 }
 
 .login-row.is-wrong {
@@ -687,11 +692,11 @@ body.dragging {
 }
 
 .login-card input {
-  flex: 1 1 auto;
-  min-width: 0;
+  display: block;
+  width: 100%;
   margin: 0;
   padding: 10px 12px;
-  background: var(--bg-inset);
+  background: var(--bg-raise);
   border: 1px solid var(--line);
   color: var(--ink);
   outline: none;
@@ -711,12 +716,11 @@ body.dragging {
 }
 
 .gate-decode {
-  flex: 1 1 auto;
-  min-width: 0;
   display: flex;
   align-items: center;
+  width: 100%;
   padding: 10px 12px;
-  background: var(--bg-inset);
+  background: var(--bg-raise);
   border: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 0.8125rem;
@@ -730,29 +734,6 @@ body.dragging {
 
 .gate-decode .is-scramble {
   color: #6a7180;
-}
-
-.login-send {
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  background: #fff;
-  color: var(--bg);
-  border: 0;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.login-send:disabled {
-  cursor: wait;
-  opacity: 1;
-}
-
-.login-send svg {
-  display: block;
 }
 
 @keyframes gate-shake {
