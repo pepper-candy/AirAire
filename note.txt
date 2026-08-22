@@ -9,3 +9,9 @@ python -m src.train_gpu_v2 --output models/news_gpu_v2 --device cuda --resume 11
 # Using FutuOpenD Terminal
 FutuOpenD.exe -lang=en
 python -m test.paper-trade-test
+
+# Folder Hosting on VM (run_finetune.bat)
+src\__pycache__\
+models\
+logs\
+data\

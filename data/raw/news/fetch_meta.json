@@ -1,47 +1,47 @@
 {
   "HK.00700": {
     "queried_from": "2026-02-24 00:00:00",
-    "queried_to": "2026-08-18 10:15:00",
+    "queried_to": "2026-08-22 18:30:56.941407",
     "symbols": [
       "TCEHY"
     ],
     "n_articles": 200,
-    "updated_at": "2026-08-18T09:20:13Z"
+    "updated_at": "2026-08-22T10:31:00Z"
   },
   "HK.03690": {
     "queried_from": "2026-02-24 00:00:00",
-    "queried_to": "2026-08-18 10:15:00",
+    "queried_to": "2026-08-22 18:30:56.941407",
     "symbols": [
       "MPNGY"
     ],
     "n_articles": 650,
-    "updated_at": "2026-08-18T09:20:27Z"
+    "updated_at": "2026-08-22T10:31:02Z"
   },
   "HK.03750": {
     "queried_from": "2026-02-24 00:00:00",
-    "queried_to": "2026-08-18 10:15:00",
+    "queried_to": "2026-08-22 18:30:56.941407",
     "symbols": [
       "300750"
     ],
     "n_articles": 650,
-    "updated_at": "2026-08-18T09:20:40Z"
+    "updated_at": "2026-08-22T10:31:05Z"
   },
   "US.COST": {
     "queried_from": "2026-02-24 00:00:00",
-    "queried_to": "2026-08-18 10:15:00",
+    "queried_to": "2026-08-22 18:30:56.941407",
     "symbols": [
       "COST"
     ],
-    "n_articles": 2692,
-    "updated_at": "2026-08-18T09:21:09Z"
+    "n_articles": 2755,
+    "updated_at": "2026-08-22T10:31:14Z"
   },
   "US.KO": {
     "queried_from": "2026-02-24 00:00:00",
-    "queried_to": "2026-08-18 10:15:00",
+    "queried_to": "2026-08-22 18:30:56.941407",
     "symbols": [
       "KO"
     ],
-    "n_articles": 2567,
-    "updated_at": "2026-08-18T09:21:37Z"
+    "n_articles": 2636,
+    "updated_at": "2026-08-22T10:31:23Z"
   }
 }

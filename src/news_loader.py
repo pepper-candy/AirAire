@@ -579,6 +579,116 @@ def _headline_rows(articles: pd.DataFrame, limit: int) -> list[dict[str, Any]]:
     return rows
 
 
+SEED_HEADLINE_TICKERS = ("US.COST", "US.KO")
+SEED_HEADLINE_LIMIT = 50
+SEED_HK_BASKET_TICKERS = ("HK.00700", "HK.03690", "HK.03750")
+SEED_BASKET_LIMIT = 80
+SEED_HK_BASKET_ID = "hk-sector-tape"
+SEED_HK_BASKET_TITLE = "Hong Kong sector tape"
+
+
+def ticker_specific_articles(articles: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    """Keep rows tagged with a real AV ticker. Drop TOPIC: fallback tape."""
+    if articles is None or articles.empty:
+        return _empty_articles()
+    aliases = {symbol.upper() for symbol in av_symbols_for(ticker)}
+    if not aliases:
+        return _empty_articles()
+    symbol = articles["av_symbol"].astype(str)
+    mask = (~symbol.str.upper().str.startswith("TOPIC:", na=False)) & (symbol.str.upper().isin(aliases))
+    return articles.loc[mask].copy()
+
+
+def last_headline_score(articles: pd.DataFrame, limit: int = NEWS_HEADLINE_WINDOW) -> float:
+    """Equal-weight mean of the newest N scores. Same reduction as live NewsPoller."""
+    if articles is None or articles.empty:
+        return 0.0
+    recent = articles.sort_values("datetime", ascending=False).head(int(limit))
+    scores = recent["sentiment_score"].to_numpy(dtype=np.float64)
+    if len(scores) == 0:
+        return 0.0
+    return float(np.clip(np.mean(scores), -1.0, 1.0))
+
+
+def merge_topic_headlines(tickers: tuple[str, ...], limit: int) -> tuple[list[dict[str, Any]], pd.Timestamp | None]:
+    """Newest-first unique articles across topic-fallback caches."""
+    frames: list[pd.DataFrame] = []
+    for ticker in tickers:
+        arts = load_articles_csv(ticker)
+        if arts is not None and not arts.empty:
+            frames.append(arts)
+    if not frames:
+        return [], None
+    combined = pd.concat(frames, ignore_index=True)
+    url = combined["url"].fillna("").astype(str) if "url" in combined.columns else pd.Series("", index=combined.index)
+    title = combined["title"].fillna("").astype(str) if "title" in combined.columns else pd.Series("", index=combined.index)
+    published = (
+        combined["time_published"].fillna("").astype(str)
+        if "time_published" in combined.columns
+        else pd.Series("", index=combined.index)
+    )
+    combined = combined.assign(_key=url.where(url != "", title + "|" + published))
+    combined = combined.drop_duplicates(subset=["_key"], keep="first").sort_values("datetime", ascending=False)
+    latest = pd.Timestamp(combined["datetime"].max()) if not combined.empty else None
+    return _headline_rows(combined, limit), latest
+
+
+def seed_news_from_cache(
+    *,
+    headline_tickers: tuple[str, ...] = SEED_HEADLINE_TICKERS,
+    headline_limit: int = SEED_HEADLINE_LIMIT,
+) -> dict[str, Any]:
+    """Build dashboard headlines/scores from ``data/raw/news`` without calling Alpha Vantage.
+
+    Costco / Coca-Cola get ticker-tagged titles. HK names keep the training
+    last-10 **number** and share one sector-tape basket (AV topic fallback).
+    """
+    headlines: dict[str, list[dict[str, Any]]] = {ticker: [] for ticker in CORE_TICKERS}
+    news_scores: dict[str, float] = {ticker: 0.0 for ticker in CORE_TICKERS}
+    counts: dict[str, dict[str, int]] = {}
+    latest_dt: pd.Timestamp | None = None
+
+    for ticker in CORE_TICKERS:
+        arts = load_articles_csv(ticker)
+        named = ticker_specific_articles(arts, ticker)
+        show_titles = ticker in headline_tickers
+        score_src = named if show_titles else arts
+        news_scores[ticker] = last_headline_score(score_src)
+        if show_titles:
+            headlines[ticker] = _headline_rows(named, headline_limit)
+        counts[ticker] = {
+            "articles": int(len(arts)),
+            "ticker_specific": int(len(named)),
+            "headlines": len(headlines[ticker]),
+        }
+        if score_src is not None and not score_src.empty:
+            mx = pd.Timestamp(score_src["datetime"].max())
+            if latest_dt is None or mx > latest_dt:
+                latest_dt = mx
+
+    basket_rows, basket_dt = merge_topic_headlines(SEED_HK_BASKET_TICKERS, SEED_BASKET_LIMIT)
+    if basket_dt is not None and (latest_dt is None or basket_dt > latest_dt):
+        latest_dt = basket_dt
+    headline_baskets: list[dict[str, Any]] = []
+    if basket_rows:
+        headline_baskets.append(
+            {
+                "id": SEED_HK_BASKET_ID,
+                "title": SEED_HK_BASKET_TITLE,
+                "members": list(SEED_HK_BASKET_TICKERS),
+                "headlines": basket_rows,
+            }
+        )
+
+    return {
+        "headlines": headlines,
+        "headline_baskets": headline_baskets,
+        "news_scores": news_scores,
+        "latest_datetime": latest_dt,
+        "counts": counts,
+    }
+
+
 def latest_ticker_news(
     ticker: str,
     api_key: str | None = None,

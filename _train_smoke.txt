@@ -1,0 +1,1 @@
+rows=31611 wide=(9293, 7) windows=118 first=2026-02-24..2026-03-30 bars=1883 steps=18530

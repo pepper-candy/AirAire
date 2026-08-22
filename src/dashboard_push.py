@@ -10,7 +10,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -117,8 +117,10 @@ def build_snapshot(
     last_bar_datetime: str,
     news_scores: dict[str, float],
     headlines: dict[str, list[dict[str, Any]]] | None = None,
+    headline_baskets: list[dict[str, Any]] | None = None,
     fills: list[dict[str, Any]] | None = None,
     initial_cash: float = INITIAL_CASH,
+    updated_at: str | None = None,
 ) -> dict[str, Any]:
     book_holdings = {t: float(holdings.get(t, 0.0)) for t in CORE_TICKERS}
     book_action = {t: float(last_action.get(t, 0.0)) for t in CORE_TICKERS}
@@ -126,7 +128,7 @@ def build_snapshot(
     book_headlines = {t: list((headlines or {}).get(t, [])) for t in CORE_TICKERS}
     return {
         "kind": kind,
-        "updated_at": hk_now_iso(),
+        "updated_at": updated_at or hk_now_iso(),
         "cash": float(cash),
         "equity": float(equity),
         "holdings": book_holdings,
@@ -135,6 +137,7 @@ def build_snapshot(
         "last_bar_datetime": str(last_bar_datetime or ""),
         "news_scores": book_news,
         "headlines": book_headlines,
+        "headline_baskets": list(headline_baskets or []),
         "fills": list(fills if fills is not None else load_recent_fills()),
         "initial_cash": float(initial_cash),
         "pnl": float(equity) - float(initial_cash),
@@ -216,9 +219,101 @@ def ping() -> int:
     return 0
 
 
+def seed_updated_at(latest_datetime: Any) -> str:
+    """Seed rows must look stale so Monday live pushes own the freshness pip."""
+    now = datetime.now(tz=HK_TZ)
+    stale_before = now - timedelta(seconds=STALE_AFTER_SECONDS + 30)
+    stamp = None
+    if latest_datetime is not None:
+        try:
+            ts = latest_datetime
+            if hasattr(ts, "to_pydatetime"):
+                ts = ts.to_pydatetime()
+            if isinstance(ts, datetime):
+                stamp = ts if ts.tzinfo is not None else ts.replace(tzinfo=HK_TZ)
+                if stamp.tzinfo is not None and stamp.tzinfo != HK_TZ:
+                    stamp = stamp.astimezone(HK_TZ)
+        except (TypeError, ValueError):
+            stamp = None
+    if stamp is None or stamp > stale_before:
+        stamp = stale_before
+    return stamp.isoformat()
+
+
+def snapshot_from_news_cache(seed: dict[str, Any] | None = None) -> dict[str, Any]:
+    if seed is None:
+        from src.news_loader import seed_news_from_cache
+
+        seed = seed_news_from_cache()
+    last_dt = seed.get("latest_datetime")
+    last_bar = ""
+    if last_dt is not None:
+        last_bar = str(last_dt).split(".")[0][:19]
+    return build_snapshot(
+        kind="seed",
+        cash=INITIAL_CASH,
+        equity=INITIAL_CASH,
+        holdings={ticker: 0.0 for ticker in CORE_TICKERS},
+        last_action={ticker: 0.0 for ticker in CORE_TICKERS},
+        last_reason="Seeded from training news cache. Paper book starts Monday.",
+        last_bar_datetime=last_bar,
+        news_scores=seed["news_scores"],
+        headlines=seed["headlines"],
+        headline_baskets=seed.get("headline_baskets") or [],
+        fills=[],
+        updated_at=seed_updated_at(last_dt),
+    )
+
+
+def seed_news(*, dry_run: bool = False) -> int:
+    """INSERT one kind=seed row from local article CSVs. Does not call Alpha Vantage."""
+    from src.news_loader import seed_news_from_cache
+
+    seed = seed_news_from_cache()
+    for ticker, info in seed["counts"].items():
+        logger.info(
+            "Seed cache %s articles=%d ticker_specific=%d headlines=%d score=%.3f",
+            ticker,
+            info["articles"],
+            info["ticker_specific"],
+            info["headlines"],
+            float(seed["news_scores"].get(ticker, 0.0)),
+        )
+    for basket in seed.get("headline_baskets") or []:
+        logger.info(
+            "Seed basket %s members=%s headlines=%d",
+            basket.get("title") or basket.get("id"),
+            ",".join(basket.get("members") or []),
+            len(basket.get("headlines") or []),
+        )
+    payload = snapshot_from_news_cache(seed)
+    if dry_run:
+        logger.info(
+            "Seed dry-run kind=%s updated_at=%s headlines=%s",
+            payload["kind"],
+            payload["updated_at"],
+            {ticker: len(rows) for ticker, rows in payload["headlines"].items()},
+        )
+        return 0
+    if not configured():
+        logger.error("Set DASHBOARD_PUSH_URL and DASHBOARD_PUSH_KEY in .env first.")
+        return 2
+    if not push_snapshot(payload):
+        logger.error("Seed push failed.")
+        return 1
+    logger.info("Seed snapshot inserted. Refresh the blotter; the strip should stay stale.")
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="AirAire dashboard snapshot push")
     p.add_argument("--ping", action="store_true", help="GET bot_snapshots; do not insert a row.")
+    p.add_argument(
+        "--seed-news",
+        action="store_true",
+        help="INSERT one kind=seed row from data/raw/news (no Alpha Vantage).",
+    )
+    p.add_argument("--dry-run", action="store_true", help="With --seed-news: print counts, do not POST.")
     return p.parse_args(argv)
 
 
@@ -226,5 +321,7 @@ if __name__ == "__main__":
     args = parse_args()
     if args.ping:
         sys.exit(ping())
-    logger.error("Use: python -m src.dashboard_push --ping")
+    if args.seed_news:
+        sys.exit(seed_news(dry_run=args.dry_run))
+    logger.error("Use: python -m src.dashboard_push --ping | --seed-news [--dry-run]")
     sys.exit(2)

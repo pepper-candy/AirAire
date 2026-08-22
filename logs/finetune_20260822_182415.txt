@@ -1,0 +1,2 @@
+2026-08-22 18:24:15 | INFO     | airaire.finetune_latest | Fine-tune log -> C:\Users\klmong\Desktop\airaire\logs\finetune_20260822_182415.txt
+2026-08-22 18:24:15 | INFO     | airaire.finetune_latest | GPU v2 settings  n_steps=2048  n_envs=4  batch=256  updates/window=8  ent_coef kept from checkpoint / make_ppo

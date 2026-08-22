@@ -1,0 +1,4 @@
+2026-08-22 17:11:38 | INFO     | airaire.finetune_latest | Fine-tune log -> C:\Users\klmong\Desktop\airaire\logs\finetune_20260822_171138.txt
+2026-08-22 17:11:38 | INFO     | airaire.finetune_latest | GPU v2 settings  n_steps=2048  n_envs=4  batch=256  updates/window=8  ent_coef kept from checkpoint / make_ppo
+2026-08-22 17:11:38 | INFO     | airaire.finetune_latest | Latest fine-tune seed: C:\Users\klmong\Desktop\airaire\models\news_gpu_v2\checkpoint_2026-08-18.zip
+2026-08-22 17:11:38 | INFO     | airaire.finetune_latest | Loaded C:\Users\klmong\Desktop\airaire\data\enhanced\enhanced_data.parquet rows=31611 span=2026-02-24 09:15:00 → 2026-08-18 10:15:00
