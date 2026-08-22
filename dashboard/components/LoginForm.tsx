@@ -92,33 +92,35 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
   }
 
   return (
-    <form className="login-card" method="post" action="/api/gate" onSubmit={onSubmit}>
+    <div className="login-stack">
       <div className="eyebrow">AirAire</div>
-      <h1>Paper Book</h1>
-      <div key={shake} className={wrong && !opening ? "login-row is-wrong" : "login-row"}>
-        {opening ? (
-          <div className="gate-decode" aria-live="polite" aria-label="WELCOME, VICTOR">
-            {decode.chars.map((ch, i) => (
-              <span key={i} className={i < decode.locked ? "is-locked" : "is-scramble"}>
-                {ch === " " ? "\u00a0" : ch}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <input
-            ref={gateRef}
-            type="password"
-            name="gate"
-            autoFocus
-            required
-            placeholder="SECURITY_CODE"
-            value={gate}
-            onChange={(event) => setGate(event.target.value)}
-            className={wrong ? "gate-wrong" : undefined}
-            aria-invalid={wrong ? true : undefined}
-          />
-        )}
-      </div>
-    </form>
+      <form className="login-card" method="post" action="/api/gate" onSubmit={onSubmit}>
+        <h1>Paper Book</h1>
+        <div key={shake} className={wrong && !opening ? "login-row is-wrong" : "login-row"}>
+          {opening ? (
+            <div className="gate-decode" aria-live="polite" aria-label="WELCOME, VICTOR">
+              {decode.chars.map((ch, i) => (
+                <span key={i} className={i < decode.locked ? "is-locked" : "is-scramble"}>
+                  {ch === " " ? "\u00a0" : ch}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <input
+              ref={gateRef}
+              type="password"
+              name="gate"
+              autoFocus
+              required
+              placeholder="SECURITY_CODE"
+              value={gate}
+              onChange={(event) => setGate(event.target.value)}
+              className={wrong ? "gate-wrong" : undefined}
+              aria-invalid={wrong ? true : undefined}
+            />
+          )}
+        </div>
+      </form>
+    </div>
   );
 }
