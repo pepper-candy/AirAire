@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CORE_TICKERS, TICKER_NAMES, type Fill, type Headline, type SnapshotResponse } from "@/lib/types";
 
-const MOBILE_MQ = "(max-width: 800px)";
+/** Keep in sync with `@media (max-width: 640px)` in dashboard/app/globals.css */
+const COMPACT_MAX_PX = 640;
+const MOBILE_MQ = `(max-width: ${COMPACT_MAX_PX}px)`;
 const HANDLE_PX = 16;
 const MIN_PANE = 200;
 
@@ -37,6 +39,26 @@ function scoreClass(n: number): string {
     return "neg";
   }
   return "";
+}
+
+function toneClass(n: number): "tone-pos" | "tone-neg" | "tone-neu" {
+  if (n > 0.05) {
+    return "tone-pos";
+  }
+  if (n < -0.05) {
+    return "tone-neg";
+  }
+  return "tone-neu";
+}
+
+function groupScore(score?: number, members?: { name: string; score: number }[]): number {
+  if (typeof score === "number") {
+    return score;
+  }
+  if (members && members.length > 0) {
+    return members.reduce((sum, member) => sum + member.score, 0) / members.length;
+  }
+  return 0;
 }
 
 function formatHkStamp(value: string | undefined): string {
@@ -158,10 +180,32 @@ function HeadlineGroup({
     ? items.slice((safePage - 1) * pageSize, safePage * pageSize)
     : items.slice(0, collapsedCount);
   const canExpand = items.length > collapsedCount;
+  const canToggle = canExpand || open;
+  const accent = groupScore(score, members);
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      setPage(1);
+      return;
+    }
+    if (canExpand) {
+      setOpen(true);
+    }
+  }
 
   return (
-    <div className="headline-group">
-      <div className="headline-bar">
+    <div className={`headline-group ${toneClass(accent)}`}>
+      <div className={canToggle ? "headline-bar is-clickable" : "headline-bar"}>
+        {canToggle ? (
+          <button
+            type="button"
+            className="headline-toggle"
+            aria-expanded={open}
+            aria-label={`${open ? "Collapse" : "Expand"} ${name} headlines`}
+            onClick={toggle}
+          />
+        ) : null}
         <div className="headline-stock-col">
           <div className="headline-stock">
             <span className="headline-stock-name">{name}</span>
@@ -183,7 +227,7 @@ function HeadlineGroup({
         </div>
         <div className="headline-tools">
           {open && pageCount > 1 ? (
-            <>
+            <div className="headline-pager">
               <button
                 type="button"
                 className="page-btn"
@@ -205,33 +249,12 @@ function HeadlineGroup({
               >
                 ›
               </button>
-            </>
+            </div>
           ) : null}
-          {open ? (
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => {
-                setOpen(false);
-                setPage(1);
-              }}
-              aria-label={`Collapse ${name} headlines`}
-            >
-              <span className="icon-fallback" aria-hidden>
-                ▴
-              </span>
-            </button>
-          ) : canExpand ? (
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => setOpen(true)}
-              aria-label={`Expand ${name} headlines`}
-            >
-              <span className="icon-fallback" aria-hidden>
-                ▾
-              </span>
-            </button>
+          {canToggle ? (
+            <span className="icon-fallback" aria-hidden>
+              {open ? "▴" : "▾"}
+            </span>
           ) : null}
         </div>
       </div>

@@ -11,13 +11,21 @@
   --stale: #d4a574;
   --neg: #e07a6a;
   --pos: #7dce8a;
-  --mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --sans: var(--font-sans), "Segoe UI", sans-serif;
+  --mono: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+  --sans: var(--font-sans), "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --head-bg: #13161e;
+  --head-bg-hover: #191d28;
   --book-share: 0.5;
+  /* Type scale. 16px = Figma. Bump here if 100% zoom still feels small. */
+  --ui: 20px;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  font-size: var(--ui);
 }
 
 html,
@@ -27,6 +35,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
+  font-feature-settings: "kern" 1, "liga" 1;
 }
 
 a {
@@ -61,7 +70,7 @@ button:disabled {
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 11px 24px;
+  padding: 12px 28px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -73,7 +82,7 @@ button:disabled {
 
 .brand-mark {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
@@ -81,7 +90,7 @@ button:disabled {
 
 .brand-title {
   font-weight: 300;
-  font-size: 15px;
+  font-size: 1.0625rem;
   line-height: 1.5;
   color: var(--ink);
 }
@@ -91,7 +100,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 7px 24px;
+  padding: 8px 28px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -125,8 +134,8 @@ button:disabled {
 
 .status-copy {
   margin: 0;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   color: var(--muted);
 }
 
@@ -138,8 +147,8 @@ button:disabled {
   display: flex;
   gap: 24px;
   font-family: var(--mono);
-  font-size: 11px;
-  line-height: 16.5px;
+  font-size: 0.75rem;
+  line-height: 1.45;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -150,16 +159,16 @@ button:disabled {
 }
 
 .page-error {
-  margin: 12px 24px 0;
+  margin: 12px 28px 0;
   color: var(--neg);
-  font-size: 13px;
+  font-size: 0.875rem;
 }
 
 .page-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 24px 0;
+  gap: 14px;
+  padding: 18px 28px 0;
 }
 
 .kpis {
@@ -172,13 +181,13 @@ button:disabled {
   background: var(--bg-raise);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   min-width: 0;
 }
 
 .kpi-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -186,19 +195,19 @@ button:disabled {
 .kpi-value {
   margin-top: 6px;
   font-family: var(--mono);
-  font-size: 22px;
+  font-size: 1.5rem;
   font-weight: 500;
   letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
   line-height: 1.35;
 }
 
 .kpi-note {
   margin-top: 6px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.75rem;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .pos {
@@ -269,7 +278,7 @@ body.dragging {
 .pane-head h2,
 .headlines-title {
   margin: 0;
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 400;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -307,7 +316,7 @@ body.dragging {
 
 .book-table th {
   padding: 6px 8px;
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -325,24 +334,24 @@ body.dragging {
 
 .book-table .num {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 0.875rem;
   text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
   white-space: nowrap;
   width: 80px;
 }
 
 .book-name {
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.5;
 }
 
 .book-code {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.75rem;
   color: var(--muted);
-  line-height: 18px;
+  line-height: 1.45;
 }
 
 .fill-day {
@@ -350,7 +359,7 @@ body.dragging {
   background: var(--bg-inset);
   border-bottom: 1px solid var(--line-soft);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 0.6875rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
@@ -370,7 +379,7 @@ body.dragging {
 
 .fill-time {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.75rem;
   color: var(--muted);
   flex: 0 0 auto;
 }
@@ -378,10 +387,10 @@ body.dragging {
 .fill-side {
   flex: 0 0 auto;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.05em;
-  line-height: 15px;
+  line-height: 1.45;
   padding: 1px 6px;
   border-radius: 3px;
 }
@@ -399,7 +408,7 @@ body.dragging {
 .fill-name {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
+  font-size: 0.875rem;
   line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -408,16 +417,16 @@ body.dragging {
 
 .fill-px {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.75rem;
   color: var(--muted);
   flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .fill-reason {
   margin: 3px 0 0;
-  font-size: 11px;
-  line-height: 16.5px;
+  font-size: 0.75rem;
+  line-height: 1.45;
   color: var(--muted);
   font-style: italic;
 }
@@ -433,6 +442,15 @@ body.dragging {
 
 .headline-group {
   border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+}
+
+.headline-group.tone-pos {
+  border-left-color: var(--pos);
+}
+
+.headline-group.tone-neg {
+  border-left-color: var(--neg);
 }
 
 .headline-bar {
@@ -440,7 +458,28 @@ body.dragging {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 0 6px;
+  padding: 10px 12px 6px;
+  background: var(--head-bg);
+  position: relative;
+}
+
+.headline-toggle {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.headline-toggle:focus-visible {
+  outline: 1px solid var(--muted);
+  outline-offset: -1px;
+}
+
+.headline-bar.is-clickable:hover,
+.headline-bar.is-clickable:hover .headline-toggle,
+.headline-bar.is-clickable:focus-within {
+  background: var(--head-bg-hover);
 }
 
 .headline-stock-col {
@@ -448,6 +487,27 @@ body.dragging {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.headline-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding-top: 2px;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.headline-pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: auto;
 }
 
 .headline-stock {
@@ -459,36 +519,28 @@ body.dragging {
 
 .headline-note {
   margin: 0;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   color: var(--muted);
 }
 
 .headline-note .pos,
 .headline-note .neg {
   font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .headline-stock-name {
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 500;
-  line-height: 19.5px;
+  line-height: 1.5;
 }
 
 .headline-stock-score {
   font-family: var(--mono);
-  font-size: 12px;
-  line-height: 18px;
-  font-variant-numeric: tabular-nums;
-}
-
-.headline-tools {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  padding-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .page-btn,
@@ -508,8 +560,8 @@ body.dragging {
 
 .page-btn {
   font-family: var(--mono);
-  font-size: 13px;
-  line-height: 13px;
+  font-size: 0.875rem;
+  line-height: 1;
   padding: 0 4px;
 }
 
@@ -521,9 +573,9 @@ body.dragging {
   min-width: 48px;
   text-align: center;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 0.75rem;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .icon-btn img {
@@ -534,10 +586,10 @@ body.dragging {
 
 .icon-fallback {
   display: block;
-  width: 22px;
-  height: 22px;
-  font-size: 20px;
-  line-height: 22px;
+  width: 1.375rem;
+  height: 1.375rem;
+  font-size: 1.25rem;
+  line-height: 1.375rem;
   text-align: center;
   color: var(--muted);
 }
@@ -546,14 +598,14 @@ body.dragging {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding: 7px 0;
+  padding: 7px 12px;
   border-top: 1px solid var(--bg-row);
   text-decoration: none;
 }
 
 .headline .title {
-  font-size: 13px;
-  line-height: 19.5px;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .headline:hover .title {
@@ -562,20 +614,20 @@ body.dragging {
 
 .headline-meta {
   font-family: var(--mono);
-  font-size: 11px;
-  line-height: 16.5px;
+  font-size: 0.75rem;
+  line-height: 1.45;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .empty {
   color: var(--muted);
   padding: 12px 16px;
-  font-size: 13px;
+  font-size: 0.875rem;
 }
 
 .headline-group .empty {
-  padding: 8px 0 12px;
+  padding: 8px 12px 12px;
 }
 
 .spark {
@@ -588,7 +640,7 @@ body.dragging {
 .spark-empty {
   margin-top: 6px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.75rem;
 }
 
 .login-wrap {
@@ -609,14 +661,14 @@ body.dragging {
 
 .login-card .eyebrow {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .login-card h1 {
   margin: 4px 0 0;
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 500;
 }
 
@@ -669,7 +721,7 @@ body.dragging {
   background: var(--bg-inset);
   border: 1px solid var(--line);
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 0.8125rem;
   letter-spacing: 0.04em;
   white-space: pre;
 }
@@ -757,16 +809,17 @@ body.dragging {
 
 .err {
   color: var(--neg);
-  font-size: 13px;
+  font-size: 0.875rem;
 }
 
-@media (max-width: 800px) {
+/* Keep in sync with COMPACT_MAX_PX in dashboard/components/Dashboard.tsx */
+@media (max-width: 640px) {
   .brand-bar {
     padding: calc(20px + env(safe-area-inset-top, 0px)) 16px 10px;
   }
 
   .brand-title {
-    font-size: 13px;
+    font-size: 0.9375rem;
   }
 
   .status-strip {
@@ -807,7 +860,7 @@ body.dragging {
   }
 
   .kpi-value {
-    font-size: 16px;
+    font-size: 1.25rem;
     margin-top: 4px;
   }
 
