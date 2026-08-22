@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CORE_TICKERS, TICKER_NAMES, type Fill, type Headline, type SnapshotResponse } from "@/lib/types";
 
-/** Keep in sync with `@media (max-width: 640px)` in dashboard/app/globals.css */
-const COMPACT_MAX_PX = 640;
-const MOBILE_MQ = `(max-width: ${COMPACT_MAX_PX}px)`;
+const MOBILE_MQ = "(max-width: 800px)";
 const HANDLE_PX = 16;
 const MIN_PANE = 200;
 

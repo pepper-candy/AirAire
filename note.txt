@@ -15,3 +15,9 @@ src\__pycache__\
 models\
 logs\
 data\
+
+# Git Reset
+git init
+git remote add origin https://github.com/pepper-candy/AirAire/
+git fetch origin
+git reset origin/main

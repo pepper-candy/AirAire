@@ -11,21 +11,6 @@ function randomGlyph(): string {
   return GLYPHS[Math.floor(Math.random() * GLYPHS.length)] || "X";
 }
 
-function PlaneIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        d="M22 2 11 13M22 2 15 22 11 13 2 9z"
-      />
-    </svg>
-  );
-}
-
 export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
   const [wrong, setWrong] = useState(wrongInitially);
   const [shake, setShake] = useState(0);
@@ -133,14 +118,6 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
             aria-invalid={wrong ? true : undefined}
           />
         )}
-        <button
-          type="submit"
-          className="login-send"
-          aria-label={opening ? "Opening blotter" : "Open blotter"}
-          disabled={opening}
-        >
-          <PlaneIcon />
-        </button>
       </div>
     </form>
   );
