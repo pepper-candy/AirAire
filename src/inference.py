@@ -548,7 +548,9 @@ def catch_up_env(
     """
     import pandas as pd
 
-    now_hk = _hk_now(now)
+    # Panel clocks (CSV / parquet) are tz-naive. _hk_now() is Asia/Hong_Kong-aware;
+    # strip tz after conversion so fetch-start and Futu date bounds stay comparable.
+    now_hk = _hk_now(now).replace(tzinfo=None)
     before_dt = env._current_dt() if len(getattr(env, "datetimes", [])) else None
     live = pd.DataFrame()
     try:

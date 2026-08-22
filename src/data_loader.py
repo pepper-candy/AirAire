@@ -370,13 +370,24 @@ _FUTU_KLINE_MAX_PAGES = 20
 _futu_history_limiter = RateLimiter()
 
 
-def _as_date_str(value: datetime | pd.Timestamp | str | None, default: datetime | None = None) -> str:
+def _naive_hk_ts(value: datetime | pd.Timestamp | str | None, default: datetime | None = None) -> pd.Timestamp:
+    """HK wall-clock Timestamp with tz stripped.
+
+    Panel CSVs / parquet store naive local-market clocks. Comparing those to a
+    tz-aware ``now`` raises ``TypeError: Cannot compare tz-naive and tz-aware``.
+    Convert into Asia/Hong_Kong first so a UTC caller still maps to the same
+    calendar day, then drop ``tzinfo`` (keep the HK wall clock).
+    """
     if value is None:
         value = default or datetime.now()
     ts = pd.Timestamp(value)
     if ts.tzinfo is not None:
         ts = pd.Timestamp(ts.tz_convert(HK_TZ).replace(tzinfo=None))
-    return ts.strftime("%Y-%m-%d")
+    return ts
+
+
+def _as_date_str(value: datetime | pd.Timestamp | str | None, default: datetime | None = None) -> str:
+    return _naive_hk_ts(value, default).strftime("%Y-%m-%d")
 
 
 def _klines_to_panel(ticker: str, data: pd.DataFrame) -> pd.DataFrame:
@@ -423,11 +434,11 @@ def fetch_futu_history(
     (HK = Beijing, US = Eastern).
     """
     tickers = list(tickers or CORE_TICKERS)
-    end_ts = pd.Timestamp(end) if end is not None else pd.Timestamp.now()
+    end_ts = _naive_hk_ts(end)
     if start is None:
         start_ts = end_ts - pd.Timedelta(days=max(int(lookback_days), 1))
     else:
-        start_ts = pd.Timestamp(start)
+        start_ts = _naive_hk_ts(start)
     start_str = _as_date_str(start_ts)
     end_str = _as_date_str(end_ts)
     limiter = limiter or _futu_history_limiter
@@ -559,13 +570,14 @@ def default_futu_fetch_start(
     lookback_days: int = FUTU_KLINE_LOOKBACK_DAYS,
 ) -> pd.Timestamp:
     """Start date for an incremental Futu pull: last panel bar minus one day, capped at ``lookback_days``."""
-    now_ts = pd.Timestamp(now) if now is not None else pd.Timestamp.now()
+    now_ts = _naive_hk_ts(now)
     floor = now_ts - pd.Timedelta(days=max(int(lookback_days), 1))
     if panel is None or panel.empty or "datetime" not in panel.columns:
         return floor
     last = pd.Timestamp(pd.to_datetime(panel["datetime"], errors="coerce").max())
     if pd.isna(last):
         return floor
+    last = _naive_hk_ts(last)
     # One-day overlap so a mid-session restart re-fetches this morning's bars.
     start = last - pd.Timedelta(days=1)
     return max(start, floor)

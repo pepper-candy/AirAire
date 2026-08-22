@@ -9,7 +9,8 @@ call venv_gpu\Scripts\activate.bat
 
 echo [2/3] Starting Futu OpenD (for data fetch)...
 start "" "C:\Users\klmong\Desktop\Futu_OpenD_10.10.7008_Windows\FutuOpenD.exe" -lang=en
-timeout /t 5 /nobreak > nul
+echo Log in in the OpenD window, then come back here.
+pause
 
 echo [3/3] Futu bars + Alpha Vantage news (last 30 days), then 1-window PPO...
 echo Telegram Promote/Keep wait is 10 minutes after a better Calmar.
