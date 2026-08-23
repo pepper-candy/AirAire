@@ -5,7 +5,7 @@
 - Alpha Vantage reads headlines; Futu OpenD places **SIMULATE** orders
 - Read-only site keeps the last book when the trader is offline
 
-**Watch the paper book:** [airaire.vercel.app](https://airaire.vercel.app)
+**Watch the paper book:** [airaire.vercel.app](https://airaire.vercel.app) (pw:Public)
 
 - Paper only. No real money. No warranty
 - Tomorrow the market will do something we did not predict

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const WELCOME = Array.from("WELCOME, VICTOR🍌");
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*";
 const SCRAMBLE_MS = 3000;
 const HOLD_MS = 3000;
@@ -16,6 +15,7 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
   const [shake, setShake] = useState(0);
   const [opening, setOpening] = useState(false);
   const [gate, setGate] = useState("");
+  const [welcome, setWelcome] = useState("Welcome");
   const [decode, setDecode] = useState<{ chars: string[]; locked: number }>({
     chars: [],
     locked: 0,
@@ -26,25 +26,26 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
     if (!opening) {
       return;
     }
+    const letters = Array.from(welcome);
     const started = performance.now();
     let frame = 0;
     const scramble = (now: number) => {
       const elapsed = now - started;
       if (elapsed >= SCRAMBLE_MS) {
-        setDecode({ locked: WELCOME.length, chars: WELCOME });
+        setDecode({ locked: letters.length, chars: letters });
         return;
       }
-      const locked = Math.floor((elapsed / SCRAMBLE_MS) * WELCOME.length);
+      const locked = Math.floor((elapsed / SCRAMBLE_MS) * letters.length);
       setDecode({
         locked,
-        chars: WELCOME.map((ch, i) => (i < locked ? ch : randomGlyph())),
+        chars: letters.map((ch, i) => (i < locked ? ch : randomGlyph())),
       });
       frame = window.requestAnimationFrame(scramble);
     };
     frame = window.requestAnimationFrame(scramble);
     const lockId = window.setTimeout(() => {
       window.cancelAnimationFrame(frame);
-      setDecode({ locked: WELCOME.length, chars: WELCOME });
+      setDecode({ locked: letters.length, chars: letters });
     }, SCRAMBLE_MS);
     const goId = window.setTimeout(() => {
       window.location.assign("/");
@@ -54,7 +55,7 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
       window.clearTimeout(lockId);
       window.clearTimeout(goId);
     };
-  }, [opening]);
+  }, [opening, welcome]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,6 +64,7 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
     }
     const form = event.currentTarget;
     const body = new FormData(form);
+    let nextWelcome = "WELCOME";
     let ok = false;
     try {
       const res = await fetch("/api/gate", {
@@ -71,8 +73,11 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
         headers: { Accept: "application/json" },
       });
       if (res.ok) {
-        const data = (await res.json()) as { ok?: boolean };
+        const data = (await res.json()) as { ok?: boolean; welcome?: string };
         ok = Boolean(data.ok);
+        if (data.welcome) {
+          nextWelcome = data.welcome;
+        }
       }
     } catch {
       ok = false;
@@ -84,10 +89,11 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
       return;
     }
     setWrong(false);
+    setWelcome(nextWelcome);
     setOpening(true);
     setDecode({
       locked: 0,
-      chars: WELCOME.map(() => randomGlyph()),
+      chars: Array.from(nextWelcome).map(() => randomGlyph()),
     });
   }
 
@@ -97,7 +103,7 @@ export function LoginForm({ wrongInitially }: { wrongInitially: boolean }) {
         <h1>Paper Book</h1>
         <div key={shake} className={wrong && !opening ? "login-row is-wrong" : "login-row"}>
           {opening ? (
-            <div className="gate-decode" aria-live="polite" aria-label="WELCOME, VICTOR">
+            <div className="gate-decode" aria-live="polite" aria-label={welcome}>
               {decode.chars.map((ch, i) => (
                 <span key={i} className={i < decode.locked ? "is-locked" : "is-scramble"}>
                   {ch === " " ? "\u00a0" : ch}

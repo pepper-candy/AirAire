@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { expectedGate, GATE_COOKIE, gatesMatch } from "@/lib/gate";
+import { GATE_COOKIE, listGates, matchGate } from "@/lib/gate";
 
 function setGateCookie(res: NextResponse, value: string): NextResponse {
   res.cookies.set({
@@ -15,12 +15,12 @@ function setGateCookie(res: NextResponse, value: string): NextResponse {
 }
 
 export async function POST(request: Request) {
-  const expected = expectedGate();
   const form = await request.formData();
   const provided = String(form.get("gate") || "");
   const wantsJson = (request.headers.get("accept") || "").includes("application/json");
+  const matched = listGates().length > 0 ? matchGate(provided) : null;
 
-  if (!expected || !gatesMatch(provided, expected)) {
+  if (!matched) {
     if (wantsJson) {
       return NextResponse.json({ ok: false }, { status: 401 });
     }
@@ -28,8 +28,8 @@ export async function POST(request: Request) {
   }
 
   if (wantsJson) {
-    return setGateCookie(NextResponse.json({ ok: true }), expected);
+    return setGateCookie(NextResponse.json({ ok: true, welcome: matched.welcome }), matched.password);
   }
 
-  return setGateCookie(NextResponse.redirect(new URL("/", request.url), 303), expected);
+  return setGateCookie(NextResponse.redirect(new URL("/", request.url), 303), matched.password);
 }
