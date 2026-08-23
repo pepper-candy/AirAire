@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { makeTestSnapshot } from "@/lib/testSnapshot";
 import { CORE_TICKERS, TICKER_NAMES, type Fill, type Headline, type SnapshotResponse } from "@/lib/types";
 
 const MOBILE_MQ = "(max-width: 800px)";
@@ -170,16 +171,47 @@ function HeadlineGroup({
 }) {
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [listH, setListH] = useState<number | null>(null);
+  const listInnerRef = useRef<HTMLDivElement>(null);
   const collapsedCount = compact ? 1 : 3;
   const pageSize = compact ? 5 : 10;
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
   const safePage = Math.min(page, pageCount);
   const visible = open
     ? items.slice((safePage - 1) * pageSize, safePage * pageSize)
-    : items.slice(0, collapsedCount);
+    : items.slice(0, Math.min(collapsedCount, items.length));
   const canExpand = items.length > collapsedCount;
   const canToggle = canExpand || open;
   const accent = groupScore(score, members);
+
+  useLayoutEffect(() => {
+    const node = listInnerRef.current;
+    if (!node) {
+      setListH(null);
+      return;
+    }
+    setListH(node.scrollHeight);
+  }, [visible, compact, items.length]);
+
+  function renderHeadline(item: Headline, key: string) {
+    const href = item.url || undefined;
+    const Tag = href ? "a" : "div";
+    return (
+      <Tag
+        key={key}
+        className="headline"
+        href={href}
+        target={href ? "_blank" : undefined}
+        rel={href ? "noreferrer" : undefined}
+      >
+        <span className="title">{item.title || "(untitled)"}</span>
+        <span className="headline-meta">
+          {item.source || "source?"} · {item.time_published || "—"}{" "}
+          <span className={scoreClass(item.sentiment_score)}>{signed(item.sentiment_score)}</span>
+        </span>
+      </Tag>
+    );
+  }
 
   function toggle() {
     if (open) {
@@ -249,35 +281,17 @@ function HeadlineGroup({
               </button>
             </div>
           ) : null}
-          {canToggle ? (
-            <span className="icon-fallback" aria-hidden>
-              {open ? "▴" : "▾"}
-            </span>
-          ) : null}
+          {!open && canToggle ? <span className="headline-expand">Expand</span> : null}
         </div>
       </div>
       {items.length === 0 ? (
         <div className="empty">No cached headlines for this name.</div>
       ) : (
-        visible.map((item, i) => {
-          const href = item.url || undefined;
-          const Tag = href ? "a" : "div";
-          return (
-            <Tag
-              key={`${name}-${i}-${item.url || item.title}`}
-              className="headline"
-              href={href}
-              target={href ? "_blank" : undefined}
-              rel={href ? "noreferrer" : undefined}
-            >
-              <span className="title">{item.title || "(untitled)"}</span>
-              <span className="headline-meta">
-                {item.source || "source?"} · {item.time_published || "—"}{" "}
-                <span className={scoreClass(item.sentiment_score)}>{signed(item.sentiment_score)}</span>
-              </span>
-            </Tag>
-          );
-        })
+        <div className={listH === null ? "headline-list" : "headline-list is-ready"} style={listH === null ? undefined : { height: listH }}>
+          <div className="headline-list-inner" ref={listInnerRef}>
+            {visible.map((item, i) => renderHeadline(item, `${name}-${safePage}-${i}-${item.url || item.title}`))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -285,12 +299,16 @@ function HeadlineGroup({
 
 export function Dashboard({ initial }: { initial: SnapshotResponse }) {
   const [data, setData] = useState(initial);
+  const [demo, setDemo] = useState(false);
   const [share, setShare] = useState(0.5);
   const splitRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef(false);
   const compact = useCompact();
 
   useEffect(() => {
+    if (demo) {
+      return;
+    }
     const tick = async () => {
       try {
         const res = await fetch("/api/snapshot", { cache: "no-store" });
@@ -303,7 +321,26 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
     };
     const id = window.setInterval(tick, 20_000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [demo]);
+
+  async function toggleDemo() {
+    if (demo) {
+      setDemo(false);
+      try {
+        const res = await fetch("/api/snapshot", { cache: "no-store" });
+        if (res.ok) {
+          setData((await res.json()) as SnapshotResponse);
+          return;
+        }
+      } catch {
+        // fall through to the last server frame
+      }
+      setData(initial);
+      return;
+    }
+    setDemo(true);
+    setData(makeTestSnapshot());
+  }
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
@@ -347,6 +384,14 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
           <span className="brand-mark">AIRAIRE</span>
           <span className="brand-title">Paper Book</span>
         </div>
+        <button
+          type="button"
+          className={demo ? "test-btn is-on" : "test-btn"}
+          onClick={toggleDemo}
+          aria-pressed={demo}
+        >
+          TEST
+        </button>
       </header>
 
       <div className={`status-strip ${stale ? "stale" : "live"}`}>
@@ -448,6 +493,7 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
           </button>
 
           <section className="pane pane-fills" aria-label="Fills">
+            <div className="pane-fills-body">
             <div className="pane-head">
               <h2>Fills</h2>
             </div>
@@ -478,6 +524,7 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
                   </div>
                 ))
               )}
+            </div>
             </div>
           </section>
         </div>
