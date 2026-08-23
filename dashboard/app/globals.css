@@ -709,8 +709,13 @@ body.dragging {
 
 .spark-empty {
   margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 1.375rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1.35;
   color: var(--muted);
-  font-size: 0.6875rem;
 }
 
 .login-wrap {
@@ -909,7 +914,8 @@ body.dragging {
     padding: 10px 12px;
   }
 
-  .kpi-value {
+  .kpi-value,
+  .spark-empty {
     font-size: 1rem;
     margin-top: 4px;
   }

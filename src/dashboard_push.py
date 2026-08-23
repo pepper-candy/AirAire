@@ -185,9 +185,13 @@ def push_snapshot(payload: dict[str, Any]) -> bool:
         return False
 
 
-def push_live_snapshot(state: Any, headlines: dict[str, list[dict[str, Any]]] | None = None) -> bool:
+def push_live_snapshot(
+    state: Any,
+    headlines: dict[str, list[dict[str, Any]]] | None = None,
+    kind: str = "live",
+) -> bool:
     try:
-        return push_snapshot(snapshot_from_state(state, headlines=headlines, kind="live"))
+        return push_snapshot(snapshot_from_state(state, headlines=headlines, kind=kind))
     except Exception as exc:  # noqa: BLE001
         logger.warning("Dashboard snapshot build failed (%s). Trading continues.", exc)
         return False

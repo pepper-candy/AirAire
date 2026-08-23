@@ -1,4 +1,19 @@
+import { anyCashSessionOpen, snapshotAt } from "./marketHours";
 import { STALE_AFTER_SECONDS, type Snapshot, type SnapshotResponse, type SnapshotRow } from "./types";
+
+const SKIP_EQUITY_KINDS = new Set(["heartbeat", "seed"]);
+
+function isSessionSnapshot(row: SnapshotRow): boolean {
+  const kind = String(row.kind || row.payload?.kind || "live").toLowerCase();
+  if (SKIP_EQUITY_KINDS.has(kind)) {
+    return false;
+  }
+  const at = snapshotAt(row.payload?.updated_at) || snapshotAt(row.created_at);
+  if (!at) {
+    return false;
+  }
+  return anyCashSessionOpen(at);
+}
 
 function supabaseUrl(): string {
   return (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/$/, "");
@@ -64,6 +79,7 @@ export async function fetchSnapshots(limit = 120): Promise<SnapshotResponse> {
   const latest = rows[0]?.payload ?? null;
   const equitySeries = [...rows]
     .reverse()
+    .filter(isSessionSnapshot)
     .map((row) => ({
       t: row.created_at,
       equity: Number(row.payload?.equity ?? 0),

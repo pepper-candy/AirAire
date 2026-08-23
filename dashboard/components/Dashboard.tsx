@@ -121,7 +121,7 @@ function useCompact(): boolean {
 
 function Sparkline({ points }: { points: { t: string; equity: number }[] }) {
   if (points.length < 2) {
-    return <div className="spark-empty">Waiting for snapshots</div>;
+    return <div className="spark-empty">NOTHING TO SHOW</div>;
   }
   const xs = points.map((p) => p.equity);
   const min = Math.min(...xs);
@@ -438,7 +438,9 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
             <div className="kpi-label">Equity Path</div>
             <Sparkline points={data.equitySeries} />
             <div className="kpi-note">
-              {data.equitySeries.length ? `${data.equitySeries.length} snapshots` : "Waiting for snapshots"}
+              {data.equitySeries.length
+                ? `${data.equitySeries.length} session snapshot${data.equitySeries.length === 1 ? "" : "s"}`
+                : "Waiting for a session snapshot"}
             </div>
           </div>
         </section>

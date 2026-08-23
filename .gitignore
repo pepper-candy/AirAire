@@ -14,3 +14,4 @@ dashboard/.next/
 data/logs/*.jsonl
 **/__pycache__/
 *.pyc
+state.pkl

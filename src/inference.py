@@ -520,11 +520,11 @@ def _hk_now(now: datetime | None = None) -> datetime:
     return now.astimezone(HK_TZ)
 
 
-def _maybe_push_dashboard(state: BotState, news: NewsPoller, enabled: bool) -> None:
+def _maybe_push_dashboard(state: BotState, news: NewsPoller, enabled: bool, kind: str = "live") -> None:
     if not enabled:
         return
     try:
-        push_live_snapshot(state, headlines=news.headlines_by_ticker())
+        push_live_snapshot(state, headlines=news.headlines_by_ticker(), kind=kind)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Dashboard push skipped (%s). Trading continues.", exc)
 
@@ -692,7 +692,7 @@ def run_loop(
                         "Both HK and US cash sessions closed. Predict-now still scores the last completed bar (no orders)."
                     )
                 else:
-                    _maybe_push_dashboard(state, news, push_dashboard)
+                    _maybe_push_dashboard(state, news, push_dashboard, kind="heartbeat")
                     wait = min(seconds_until_next_open(), 300)
                     logger.info("Both HK and US cash sessions closed. HOLD. Sleeping %ss.", wait)
                     if once:
