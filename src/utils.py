@@ -7,7 +7,7 @@ import os
 import threading
 import time
 from collections import deque
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time as dt_time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -170,6 +170,10 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 BLOOMBERG_STALE_DAYS = 5
 
+# Training and live inference use completed 10-min klines only. A forming
+# candle (bar_start + 10 minutes still in the future) is dropped / not traded.
+BAR_MINUTES = 10
+
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -256,11 +260,121 @@ def ticker_market(ticker: str) -> str:
     raise ValueError(f"Unknown market for ticker {ticker}")
 
 
+def market_zone(ticker: str) -> ZoneInfo:
+    try:
+        return HK_TZ if ticker_market(ticker) == "HK" else US_TZ
+    except ValueError:
+        return HK_TZ
+
+
+def market_naive_now(ticker: str, now: datetime | None = None) -> datetime:
+    """Wall clock in that ticker's session timezone, tz-stripped.
+
+    Naive ``now`` is treated as Asia/Hong_Kong (inference catch-up convention).
+    """
+    tz = market_zone(ticker)
+    if now is None:
+        return datetime.now(tz=tz).replace(tzinfo=None)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=HK_TZ)
+    return now.astimezone(tz).replace(tzinfo=None)
+
+
+def is_kline_complete(
+    bar_dt: datetime | None,
+    ticker: str = "HK.00700",
+    now: datetime | None = None,
+    bar_minutes: int = BAR_MINUTES,
+) -> bool:
+    """True when ``bar_dt`` + ``bar_minutes`` is already past on that market clock.
+
+    Futu ``K_10M`` stamps are the bar *start* (HK 09:30 = 09:30–09:40). Training
+    only ever saw finished candles, so live must wait until that window closes.
+    """
+    if bar_dt is None:
+        return False
+    to_pydt = getattr(bar_dt, "to_pydatetime", None)
+    if callable(to_pydt):
+        bar_dt = to_pydt()
+    if not isinstance(bar_dt, datetime):
+        try:
+            bar_dt = datetime.fromisoformat(str(bar_dt))
+        except ValueError:
+            return False
+    if bar_dt.tzinfo is not None:
+        bar_dt = bar_dt.astimezone(market_zone(ticker)).replace(tzinfo=None)
+    return bar_dt + timedelta(minutes=bar_minutes) <= market_naive_now(ticker, now)
+
+
 def is_ticker_market_open(ticker: str, now: datetime | None = None) -> bool:
     market = ticker_market(ticker)
     if market == "HK":
         return is_hk_market_open(now)
     return is_us_market_open(now)
+
+
+def _aware_now(now: datetime | None, tz: ZoneInfo) -> datetime:
+    if now is None:
+        return datetime.now(tz=tz)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=HK_TZ)
+    return now.astimezone(tz)
+
+
+def cash_session_key(ticker: str, now: datetime | None = None) -> str | None:
+    """``HK-am`` / ``HK-pm`` / ``US`` while that cash session is open."""
+    if not is_ticker_market_open(ticker, now):
+        return None
+    if ticker_market(ticker) == "US":
+        return "US"
+    local = _aware_now(now, HK_TZ)
+    t = local.time()
+    if dt_time(9, 30) <= t < dt_time(12, 0):
+        return "HK-am"
+    if dt_time(13, 0) <= t < dt_time(16, 0):
+        return "HK-pm"
+    return None
+
+
+def session_date_iso(session_key: str, now: datetime | None = None) -> str:
+    tz = US_TZ if session_key == "US" else HK_TZ
+    return _aware_now(now, tz).date().isoformat()
+
+
+def is_cash_open_bar_complete(
+    ticker: str,
+    now: datetime | None = None,
+    bar_minutes: int = BAR_MINUTES,
+) -> bool:
+    """False in the first ``bar_minutes`` of a cash session.
+
+    HK 09:30–09:40, HK lunch reopen 13:00–13:10, US 09:30–09:40 ET.
+    Matches training: first actionable bar is the first *finished* 10-min kline.
+    """
+    if not is_ticker_market_open(ticker, now):
+        return False
+    if ticker_market(ticker) == "HK":
+        local = _aware_now(now, HK_TZ)
+        t = local.time()
+        if dt_time(9, 30) <= t < dt_time(12, 0):
+            return t >= dt_time(9, 30 + bar_minutes)
+        if dt_time(13, 0) <= t < dt_time(16, 0):
+            return t >= dt_time(13, bar_minutes)
+        return False
+    local = _aware_now(now, US_TZ)
+    return local.time() >= dt_time(9, 30 + bar_minutes)
+
+
+def ready_cash_sessions(now: datetime | None = None) -> list[str]:
+    """Session keys whose first 10-min cash bar has already closed."""
+    keys: list[str] = []
+    for ticker in CORE_TICKERS:
+        if not is_cash_open_bar_complete(ticker, now):
+            continue
+        key = cash_session_key(ticker, now)
+        if key and key not in keys:
+            keys.append(key)
+    return keys
 
 
 def any_core_market_open(now: datetime | None = None) -> bool:

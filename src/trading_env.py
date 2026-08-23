@@ -26,6 +26,7 @@ import pandas as pd
 from gymnasium import spaces
 
 from src.utils import (
+    BAR_MINUTES,
     CORE_TICKERS,
     HK_TZ,
     INITIAL_CASH,
@@ -358,17 +359,26 @@ class TradingEnv(gym.Env):
         obs = self._get_obs()
         return obs, {"bar_index": self._bar_index, "datetime": self._current_dt()}
 
-    def seek_to_datetime(self, target: datetime | pd.Timestamp | None = None) -> pd.Timestamp:
+    def seek_to_datetime(
+        self,
+        target: datetime | pd.Timestamp | None = None,
+        *,
+        completed_bars: bool = False,
+    ) -> pd.Timestamp:
         """Jump ``_bar_index`` to the last bar at or before ``target``. No rebalance.
 
         Inference catch-up: if the bot starts at 12:45, call this (after
         appending any missing Futu bars) so the lookback window ends at the
         latest completed 10-min bar. Holdings / cash are left untouched —
         restore them with ``restore_portfolio`` from ``state.pkl``.
+
+        ``completed_bars=True`` walks back while ``bar_start + 10 minutes`` is
+        still in the future (forming OpenD candle). Training never used those.
         """
         if len(self.datetimes) == 0:
             return self._current_dt()
         if target is None:
+            ts = pd.Timestamp(datetime.now(tz=HK_TZ).replace(tzinfo=None))
             idx = len(self.datetimes) - 1
         else:
             ts = pd.Timestamp(target)
@@ -380,6 +390,10 @@ class TradingEnv(gym.Env):
             idx = min(idx, len(self.datetimes) - 1)
             # Keep a full lookback window when the panel is long enough.
             idx = max(idx, min(self.lookback_bars, len(self.datetimes) - 1))
+        if completed_bars:
+            bar_delta = pd.Timedelta(minutes=BAR_MINUTES)
+            while idx > 0 and pd.Timestamp(self.datetimes[idx]) + bar_delta > ts:
+                idx -= 1
         self._bar_index = int(idx)
         if len(self._close_matrix):
             seed_px = self._close_matrix[min(self._bar_index, len(self._close_matrix) - 1)]
