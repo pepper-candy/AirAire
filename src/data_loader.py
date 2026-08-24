@@ -22,6 +22,7 @@ import pandas as pd
 
 from src.utils import (
     ALL_TICKERS,
+    BAR_MINUTES,
     BLOOMBERG_FILES,
     BLOOMBERG_STALE_DAYS,
     CORE_TICKERS,
@@ -34,6 +35,7 @@ from src.utils import (
     HK_TZ,
     UNIFIED_PARQUET,
     RateLimiter,
+    market_naive_now,
     setup_logging,
 )
 
@@ -390,6 +392,54 @@ def _as_date_str(value: datetime | pd.Timestamp | str | None, default: datetime 
     return _naive_hk_ts(value, default).strftime("%Y-%m-%d")
 
 
+def _coerce_now(now: datetime | pd.Timestamp | None) -> datetime | None:
+    if now is None:
+        return None
+    to_pydt = getattr(now, "to_pydatetime", None)
+    if callable(to_pydt):
+        return to_pydt()
+    return now if isinstance(now, datetime) else None
+
+
+def drop_incomplete_klines(
+    df: pd.DataFrame | None,
+    now: datetime | pd.Timestamp | None = None,
+    bar_minutes: int = BAR_MINUTES,
+) -> pd.DataFrame:
+    """Drop forming candles: keep a row only when bar_start + 10 minutes <= now.
+
+    Futu ``request_history_kline`` usually includes the in-progress 10-min bar
+    (HK 09:30 at 09:31). Training never saw those stubs. Per-ticker clocks:
+    HK bars vs Asia/Hong_Kong, US bars vs America/New_York.
+    """
+    if df is None or df.empty:
+        return df if df is not None else pd.DataFrame(columns=STANDARD_COLUMNS)
+    if "datetime" not in df.columns or "ticker" not in df.columns:
+        return df
+    out = df.copy()
+    out["datetime"] = pd.to_datetime(out["datetime"], errors="coerce")
+    now_dt = _coerce_now(now)
+    kept: list[pd.DataFrame] = []
+    dropped = 0
+    for ticker, part in out.groupby("ticker", sort=False):
+        now_local = pd.Timestamp(market_naive_now(str(ticker), now_dt))
+        close_at = part["datetime"] + pd.Timedelta(minutes=bar_minutes)
+        mask = close_at.notna() & (close_at <= now_local)
+        dropped += int((~mask).sum())
+        if mask.any():
+            kept.append(part.loc[mask])
+    if dropped:
+        logger.info(
+            "Dropped %d incomplete %d-min kline(s) still forming at %s.",
+            dropped,
+            bar_minutes,
+            now_dt or "wall clock",
+        )
+    if not kept:
+        return out.iloc[0:0].reset_index(drop=True)
+    return pd.concat(kept, ignore_index=True).sort_values(["datetime", "ticker"]).reset_index(drop=True)
+
+
 def _klines_to_panel(ticker: str, data: pd.DataFrame) -> pd.DataFrame:
     """Map a Futu ``request_history_kline`` frame onto STANDARD_COLUMNS."""
     if data is None or len(data) == 0:
@@ -505,6 +555,9 @@ def fetch_futu_history(
     if not frames:
         return pd.DataFrame(columns=STANDARD_COLUMNS)
     out = pd.concat(frames, ignore_index=True).sort_values(["ticker", "datetime"]).reset_index(drop=True)
+    out = drop_incomplete_klines(out, now=end_ts)
+    if out.empty:
+        return pd.DataFrame(columns=STANDARD_COLUMNS)
     logger.info(
         "Futu history overlay: %d rows, tickers=%s, span=%s → %s",
         len(out),
@@ -515,11 +568,18 @@ def fetch_futu_history(
     return out
 
 
-def overlay_live_ohlcv(panel: pd.DataFrame | None, live: pd.DataFrame | None) -> pd.DataFrame:
+def overlay_live_ohlcv(
+    panel: pd.DataFrame | None,
+    live: pd.DataFrame | None,
+    now: datetime | pd.Timestamp | None = None,
+) -> pd.DataFrame:
     """Append live Futu bars onto a long panel. Live rows win on (ticker, datetime).
 
     ``news_score`` on brand-new bars is forward-filled from the last known
     sentiment so the env never sees NaNs. Missing news stays 0.0.
+
+    Forming 10-min candles (bar still open) are dropped so the env only sees
+    completed bars, matching training.
     """
     if panel is None or panel.empty:
         base = pd.DataFrame(columns=STANDARD_COLUMNS)
@@ -528,7 +588,12 @@ def overlay_live_ohlcv(panel: pd.DataFrame | None, live: pd.DataFrame | None) ->
         base["datetime"] = pd.to_datetime(base["datetime"], errors="coerce")
 
     if live is None or live.empty:
-        return base.reset_index(drop=True) if not base.empty else pd.DataFrame(columns=list(base.columns) or STANDARD_COLUMNS)
+        result = (
+            base.reset_index(drop=True)
+            if not base.empty
+            else pd.DataFrame(columns=list(base.columns) or STANDARD_COLUMNS)
+        )
+        return drop_incomplete_klines(result, now=now)
 
     fresh = live.copy()
     fresh["datetime"] = pd.to_datetime(fresh["datetime"], errors="coerce")
@@ -545,7 +610,8 @@ def overlay_live_ohlcv(panel: pd.DataFrame | None, live: pd.DataFrame | None) ->
         if col in merged.columns:
             merged[col] = pd.to_numeric(merged[col], errors="coerce")
             merged[col] = merged.groupby("ticker", group_keys=False)[col].ffill().fillna(0.0)
-    return merged.sort_values(["datetime", "ticker"]).reset_index(drop=True)
+    merged = merged.sort_values(["datetime", "ticker"]).reset_index(drop=True)
+    return drop_incomplete_klines(merged, now=now)
 
 
 def persist_enhanced_panel(panel: pd.DataFrame, path: Path | None = None) -> Path | None:

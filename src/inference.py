@@ -12,8 +12,12 @@ Startup catch-up (Phase 4):
 
 Live loop (Phase 4):
     Poll every 60s so we notice a new Futu 10-min close within a minute.
-    Place SIMULATE orders only on a *new* completed bar, or when news jumps
-    by ``NEWS_RETRADE_DELTA``. Same-bar 1-minute price drift does not rebalance.
+    Forming OpenD candles are dropped. HK and US names each wait out the
+    first 10 minutes of their own cash session (HK 09:30 / 13:00, US 09:30
+    ET) so the first fill is on a finished kline. Then place SIMULATE orders
+    only on a *new* completed bar, a new session's first ready cycle, or
+    when news jumps by ``NEWS_RETRADE_DELTA``. Same-bar 1-minute price
+    drift does not rebalance.
 
     ``--predict-now``: one live score (quotes + news), no orders, no ``state.pkl``
     write. Safe while the continuous trader is already running.
@@ -65,8 +69,12 @@ from src.utils import (
     TICKER_NAMES,
     RateLimiter,
     any_core_market_open,
+    is_cash_open_bar_complete,
+    is_kline_complete,
     is_ticker_market_open,
+    ready_cash_sessions,
     seconds_until_next_open,
+    session_date_iso,
     send_telegram_alert,
     setup_logging,
     ticker_market,
@@ -93,6 +101,7 @@ class BotState:
     updated_at: str = ""
     last_bar_datetime: str = ""
     last_order_bar: str = ""
+    last_session_ready: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -117,6 +126,9 @@ class BotState:
             updated_at=str(raw.get("updated_at", "")),
             last_bar_datetime=str(raw.get("last_bar_datetime", "")),
             last_order_bar=str(raw.get("last_order_bar", "")),
+            last_session_ready={
+                str(k): str(v) for k, v in (raw.get("last_session_ready") or {}).items()
+            },
         )
 
 
@@ -143,6 +155,7 @@ def load_state(path: Path = STATE_PKL) -> BotState:
             "updated_at",
             "last_bar_datetime",
             "last_order_bar",
+            "last_session_ready",
         ):
             if hasattr(raw, key):
                 payload[key] = getattr(raw, key)
@@ -560,23 +573,24 @@ def catch_up_env(
         logger.warning("Futu catch-up fetch failed (%s). Seeking on the existing panel only.", exc)
 
     rebuilt = False
+    n_before = 0 if panel is None or getattr(panel, "empty", True) else len(panel)
+    panel = overlay_live_ohlcv(panel, live, now=now_hk)
+    n_after = 0 if panel is None or panel.empty else len(panel)
     if live is not None and not live.empty:
-        n_before = 0 if panel is None or getattr(panel, "empty", True) else len(panel)
-        panel = overlay_live_ohlcv(panel, live)
-        n_after = 0 if panel is None or panel.empty else len(panel)
         logger.info(
             "Catch-up merged %d live Futu rows into the panel (%d → %d).",
             len(live),
             n_before,
             n_after,
         )
+    if (live is not None and not live.empty) or n_after != n_before:
         env = TradingEnv(df=panel if panel is not None and not panel.empty else None, news_scores=state.news_scores)
         rebuilt = True
         if persist_panel and panel is not None and not panel.empty:
             persist_enhanced_panel(panel)
 
     env.reset()
-    caught_dt = env.seek_to_datetime(now_hk)
+    caught_dt = env.seek_to_datetime(now_hk, completed_bars=True)
     env.restore_portfolio(state.cash, state.holdings)
     env.set_news_scores(state.news_scores)
 
@@ -671,7 +685,7 @@ def run_loop(
         state = reconcile_with_futu(state, broker)
         if skip_catch_up:
             env.reset()
-            env.seek_to_datetime(_hk_now())
+            env.seek_to_datetime(_hk_now(), completed_bars=True)
             env.restore_portfolio(state.cash, state.holdings)
             env.set_news_scores(state.news_scores)
             logger.warning("Catch-up skipped (--skip-catch-up). Env sought to now without Futu history.")
@@ -717,16 +731,28 @@ def run_loop(
                             persist_state=persist_state,
                         )
                     else:
-                        env.seek_to_datetime(_hk_now())
+                        env.seek_to_datetime(_hk_now(), completed_bars=True)
                         env.restore_portfolio(state.cash, state.holdings)
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("In-session catch-up failed (%s). Using current env bar.", exc)
 
             prices = broker.snapshot_prices()
+            now_loop = _hk_now()
+            ready_keys = ready_cash_sessions(now_loop)
+            any_session_ready = bool(ready_keys)
+            session_today = {key: session_date_iso(key, now_loop) for key in ready_keys}
+            first_session = any(state.last_session_ready.get(key) != session_today[key] for key in ready_keys)
+
             news_prev = dict(state.news_scores)
             news_now = news.fetch_open_markets()
             env.set_news_scores(news_now)
-            state.news_scores = news_now
+            # Freeze book scores until a session's first 10-min bar has closed so
+            # a 09:30 headline can still trip NEWS_RETRADE_DELTA at 09:40.
+            if any_session_ready:
+                news_jump = _news_jumped(news_prev, news_now)
+                state.news_scores = news_now
+            else:
+                news_jump = False
 
             obs = env._get_obs()
             raw_action = predict_action(model, obs)
@@ -736,10 +762,25 @@ def run_loop(
 
             bar_id = str(env._current_dt())
             new_bar = bar_id != state.last_order_bar
-            news_jump = _news_jumped(news_prev, news_now)
-            allow_orders = (not predict_now) and (new_bar or news_jump)
+            bar_ready = is_kline_complete(env._current_dt(), now=now_loop)
+            allow_orders = (
+                (not predict_now)
+                and bar_ready
+                and any_session_ready
+                and (new_bar or news_jump or first_session)
+            )
             if predict_now:
                 logger.info("Predict-now bar=%s (preview only).", bar_id)
+            elif not any_session_ready:
+                logger.info(
+                    "Cash session in first 10 minutes — wait for a completed open bar "
+                    "(HK 09:40 / 13:10, US 09:40 ET)."
+                )
+            elif not bar_ready:
+                logger.info(
+                    "Forming 10-min bar (%s) — wait for the close before orders (matches training).",
+                    bar_id,
+                )
             elif not allow_orders:
                 logger.info(
                     "Same 10-min bar (%s) and news unchanged — skip orders this 60s cycle (no 1-min price chase).",
@@ -754,6 +795,13 @@ def run_loop(
                 if not is_ticker_market_open(ticker):
                     logger.info(
                         "%s market closed — keep holdings=%.4f, no order.",
+                        ticker,
+                        current,
+                    )
+                    continue
+                if not is_cash_open_bar_complete(ticker, now_loop):
+                    logger.info(
+                        "%s first 10-min cash bar still open — keep holdings=%.4f, no order.",
                         ticker,
                         current,
                     )
@@ -799,6 +847,7 @@ def run_loop(
 
             if allow_orders:
                 state.last_order_bar = bar_id
+                state.last_session_ready.update(session_today)
             state.equity = state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS)
             state.last_bar_datetime = str(env._current_dt())
             env.restore_portfolio(state.cash, state.holdings)
