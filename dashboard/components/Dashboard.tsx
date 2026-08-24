@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { EquityChart } from "@/components/EquityChart";
+import { filterPoints, hkYmd, metaFor, shapeSeries } from "@/lib/equityRange";
 import { makeTestSnapshot } from "@/lib/testSnapshot";
-import { CORE_TICKERS, TICKER_NAMES, type Fill, type Headline, type SnapshotResponse } from "@/lib/types";
+import { CORE_TICKERS, TICKER_NAMES, type Fill, type Headline, type RangeMode, type SnapshotResponse } from "@/lib/types";
 
 const MOBILE_MQ = "(max-width: 800px)";
 const HANDLE_PX = 16;
@@ -107,21 +109,43 @@ function hkClock(value: string): string {
   }).format(new Date(ms));
 }
 
-function useCompact(): boolean {
-  const [compact, setCompact] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(MOBILE_MQ);
-    const sync = () => setCompact(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return compact;
+function equityNote(meta: { rawCount: number; shownCount: number; bucketMinutes: number } | undefined, shown: number): string {
+  if (!meta) {
+    return shown ? `${shown} session snapshots` : "Waiting for a session snapshot";
+  }
+  if (meta.shownCount === meta.rawCount) {
+    return `${meta.rawCount} session snaps on chart · all of them · ${meta.bucketMinutes}-min`;
+  }
+  return `${meta.shownCount} on chart of ${meta.rawCount} session snaps · ${meta.bucketMinutes}-min buckets`;
 }
 
-function Sparkline({ points }: { points: { t: string; equity: number }[] }) {
+function ExpandGlyph({ open }: { open: boolean }) {
+  return (
+    <svg className="equity-expand" viewBox="0 0 16 16" aria-hidden>
+      {open ? (
+        <path
+          d="M5 2v3H2M11 2v3h3M11 14v-3h3M5 14v-3H2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="square"
+        />
+      ) : (
+        <path
+          d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="square"
+        />
+      )}
+    </svg>
+  );
+}
+
+function MiniSpark({ points }: { points: { t: string; equity: number }[] }) {
   if (points.length < 2) {
-    return <div className="spark-empty">NOTHING TO SHOW</div>;
+    return <div className="spark-empty">—</div>;
   }
   const xs = points.map((p) => p.equity);
   const min = Math.min(...xs);
@@ -139,6 +163,18 @@ function Sparkline({ points }: { points: { t: string; equity: number }[] }) {
       <path d={d} fill="none" stroke="#8fbf9f" strokeWidth="1.4" />
     </svg>
   );
+}
+
+function useCompact(): boolean {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ);
+    const sync = () => setCompact(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return compact;
 }
 
 function groupFills(fills: Fill[]): { day: string; rows: Fill[] }[] {
@@ -301,9 +337,19 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
   const [data, setData] = useState(initial);
   const [demo, setDemo] = useState(false);
   const [share, setShare] = useState(0.5);
+  const [range, setRange] = useState<RangeMode>(initial.equityMeta?.range || "today");
+  const [day, setDay] = useState(initial.equityMeta?.day || hkYmd());
+  const [demoSeries, setDemoSeries] = useState(initial.equitySeries);
+  const [equityOpen, setEquityOpen] = useState(true);
   const splitRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef(false);
   const compact = useCompact();
+
+  useLayoutEffect(() => {
+    if (window.matchMedia(MOBILE_MQ).matches) {
+      setEquityOpen(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (demo) {
@@ -313,7 +359,13 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
       try {
         const res = await fetch("/api/snapshot", { cache: "no-store" });
         if (res.ok) {
-          setData((await res.json()) as SnapshotResponse);
+          const next = (await res.json()) as SnapshotResponse;
+          setData((prev) => ({
+            ...prev,
+            latest: next.latest,
+            stale: next.stale,
+            error: next.error,
+          }));
         }
       } catch {
         // keep last good frame
@@ -323,23 +375,82 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
     return () => window.clearInterval(id);
   }, [demo]);
 
+  useEffect(() => {
+    if (demo) {
+      const raw = filterPoints(demoSeries, range, day);
+      const shaped = shapeSeries(raw, range);
+      setData((prev) => ({
+        ...prev,
+        equitySeries: shaped.shown,
+        equityMeta: metaFor(range, day, raw.length, shaped.shown.length, shaped.bucketMinutes),
+      }));
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const params = new URLSearchParams({ range });
+        if (range === "day") {
+          params.set("day", day);
+        }
+        const res = await fetch(`/api/equity?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) {
+          return;
+        }
+        const next = (await res.json()) as Pick<SnapshotResponse, "equitySeries" | "equityMeta" | "error">;
+        if (cancelled) {
+          return;
+        }
+        setData((prev) => ({
+          ...prev,
+          equitySeries: next.equitySeries || [],
+          equityMeta: next.equityMeta,
+          error: next.error || prev.error,
+        }));
+      } catch {
+        // keep last series
+      }
+    };
+    void load();
+    const poll = range === "today" || range === "week";
+    const id = poll ? window.setInterval(load, range === "today" ? 20_000 : 60_000) : 0;
+    return () => {
+      cancelled = true;
+      if (id) {
+        window.clearInterval(id);
+      }
+    };
+  }, [demo, demoSeries, range, day]);
+
   async function toggleDemo() {
     if (demo) {
       setDemo(false);
       try {
         const res = await fetch("/api/snapshot", { cache: "no-store" });
         if (res.ok) {
-          setData((await res.json()) as SnapshotResponse);
+          const next = (await res.json()) as SnapshotResponse;
+          setData((prev) => ({
+            ...prev,
+            latest: next.latest,
+            stale: next.stale,
+            error: next.error,
+          }));
           return;
         }
       } catch {
         // fall through to the last server frame
       }
-      setData(initial);
+      setData((prev) => ({
+        ...initial,
+        equitySeries: prev.equitySeries,
+        equityMeta: prev.equityMeta,
+      }));
       return;
     }
     setDemo(true);
-    setData(makeTestSnapshot());
+    const fake = makeTestSnapshot();
+    setDemoSeries(fake.equitySeries);
+    setData(fake);
   }
 
   useEffect(() => {
@@ -403,10 +514,12 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
         </div>
         <div className="status-meta">
           <div className="status-meta-row">
-            <span>Last snapshot</span> <strong>{formatHkStamp(snap?.updated_at)}</strong>
+            <span className="status-label-full">Last Snapshot</span>
+            <span className="status-label-short">Last Snap</span>{" "}
+            <strong>{formatHkStamp(snap?.updated_at)}</strong>
           </div>
           <div className="status-meta-row">
-            <span>Last bar</span> <strong>{snap?.last_bar_datetime || "—"}</strong>
+            <span>Last Bar</span> <strong>{snap?.last_bar_datetime || "—"}</strong>
           </div>
         </div>
       </div>
@@ -434,14 +547,71 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
               {snap && startCash ? `${signed(pnlPct, 2)}% since start` : "—"}
             </div>
           </div>
-          <div className="card">
+          <button
+            type="button"
+            className={equityOpen ? "card equity-mini is-on" : "card equity-mini"}
+            onClick={() => setEquityOpen((open) => !open)}
+            aria-expanded={equityOpen}
+            aria-label={equityOpen ? "Hide equity path" : "Show equity path"}
+          >
             <div className="kpi-label">Equity Path</div>
-            <Sparkline points={data.equitySeries} />
-            <div className="kpi-note">
-              {data.equitySeries.length
-                ? `${data.equitySeries.length} session snapshot${data.equitySeries.length === 1 ? "" : "s"}`
-                : "Waiting for a session snapshot"}
+            <div className="equity-mini-spark">
+              <MiniSpark points={data.equitySeries} />
             </div>
+            <ExpandGlyph open={equityOpen} />
+          </button>
+          <div className={`card equity-card${equityOpen ? "" : " is-stowed"}`}>
+            <div className="equity-head">
+              <div>
+                <div className="kpi-label">Equity Path</div>
+                <div
+                  className="kpi-note"
+                  title={
+                    data.equityMeta && data.equityMeta.shownCount !== data.equityMeta.rawCount
+                      ? "On chart = downsampled points drawn. Session snaps = every session row in this range."
+                      : "On chart and session snaps match: every snapshot in this range is drawn."
+                  }
+                >
+                  {equityNote(data.equityMeta, data.equitySeries.length)}
+                </div>
+              </div>
+              <div className="equity-controls">
+                <button
+                  type="button"
+                  className={range === "today" ? "range-btn is-on" : "range-btn"}
+                  onClick={() => {
+                    setRange("today");
+                    setDay(hkYmd());
+                  }}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className={range === "week" ? "range-btn is-on" : "range-btn"}
+                  onClick={() => setRange("week")}
+                >
+                  Week
+                </button>
+                <label className="range-day">
+                  <span>Day</span>
+                  <input
+                    type="date"
+                    value={range === "day" ? day : hkYmd()}
+                    max={hkYmd()}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      if (!next) {
+                        return;
+                      }
+                      setDay(next);
+                      setRange("day");
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+            <EquityChart points={data.equitySeries} />
           </div>
         </section>
 
@@ -456,7 +626,9 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
                 <tr>
                   <th>Name</th>
                   <th className="num">Qty</th>
-                  <th className="num">Act</th>
+                  <th className="num" title="Last PPO output. −1 = want full short, +1 = want full long. Qty is the book.">
+                    Tgt
+                  </th>
                   <th className="num">News</th>
                 </tr>
               </thead>

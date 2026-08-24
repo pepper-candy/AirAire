@@ -62,9 +62,20 @@ export type EquityPoint = {
   equity: number;
 };
 
+export type RangeMode = "today" | "week" | "day";
+
+export type EquityMeta = {
+  range: RangeMode;
+  day: string;
+  rawCount: number;
+  shownCount: number;
+  bucketMinutes: number;
+};
+
 export type SnapshotResponse = {
   latest: Snapshot | null;
   equitySeries: EquityPoint[];
+  equityMeta?: EquityMeta;
   stale: boolean;
   staleAfterSeconds: number;
   error?: string;
