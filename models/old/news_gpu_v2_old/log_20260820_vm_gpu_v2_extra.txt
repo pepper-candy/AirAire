@@ -1,0 +1,1128 @@
+(venv_gpu) C:\Users\klmong\Desktop\airaire>python -m src.train_gpu_v2 --output models/news_gpu_v2 --device cuda --resume 113
+2026-08-20 20:24:43 | INFO     | airaire.train_gpu_v2 | Terminal output is also written to C:\Users\klmong\Desktop\airaire\logs\train_20260820_202443.txt
+2026-08-20 20:24:43 | INFO     | airaire.train | PPO device=cuda  cuda_available=True
+2026-08-20 20:24:43 | INFO     | airaire.train_gpu_v2 | CUDA device=NVIDIA A40-2Q  VRAM=2.00 GB  cc=8.6
+2026-08-20 20:24:43 | INFO     | airaire.train_gpu_v2 | VRAM is tight (2.00 GB). Starting at n_steps=2048 batch=256 n_envs=4; OOM will auto-downgrade.
+2026-08-20 20:24:43 | INFO     | airaire.train_gpu_v2 | GPU monitor [startup]: alloc=0 MB  reserved=0 MB  total=2048 MB  util=n/a
+2026-08-20 20:24:43 | INFO     | airaire.train_gpu_v2 | GPU v2 config  n_steps=2048  n_envs=4  batch=256  net=512  desired_updates=8  rollout=8192  steps/window>=65536  ent_coef=0.010  target_kl=0.030
+2026-08-20 20:24:43 | INFO     | airaire.train_gpu_v2 | News-integrated GPU v2 training. Checkpoints -> models\news_gpu_v2 (models/news and models/news_gpu are left untouched).
+2026-08-20 20:24:44 | INFO     | airaire.train_gpu_v2 | Loading cached enhanced panel C:\Users\klmong\Desktop\airaire\data\enhanced\enhanced_data.parquet
+2026-08-20 20:24:44 | INFO     | airaire.train_gpu_v2 | Loaded panel rows=31611 tickers=['HK.00700', 'HK.03690', 'HK.03750', 'HK.HSI', 'US.COST', 'US.KO', 'US.SPX'] span=2026-02-24 09:15:00 -> 2026-08-18 10:15:00 | wide close (9293, 7) | news_coverage=100.0%
+2026-08-20 20:24:44 | INFO     | airaire.train_gpu_v2 | Rolling 118 sequential windows of 30 session days (step = 1 day).
+2026-08-20 20:24:44 | INFO     | airaire.train_gpu_v2 | Warm-start GPU weights from models\news_gpu_v2\checkpoint_2026-08-11.zip  (first window index=113)
+2026-08-20 20:24:45 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18299999833106995, 0.2150000035762787]
+2026-08-20 20:24:45 | INFO     | airaire.train | News block (4) sample=[0.30410000681877136, 0.03449999913573265, 0.10540000349283218, 0.1834000051021576, 0.21529999375343323]  nonzero=5/5  obs_dim=782
+2026-08-20 20:24:45 | INFO     | airaire.train_gpu_v2 | Window 113/118  2026-07-09 -> 2026-08-12  bars=1950  timesteps=65536  n_envs=4  n_steps=2048  ppo_updates~8  news_coverage=100.0%
+2026-08-20 20:24:51 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18299999833106995, 0.2150000035762787]
+2026-08-20 20:24:56 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18299999833106995, 0.2150000035762787]
+2026-08-20 20:25:02 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18299999833106995, 0.2150000035762787]
+2026-08-20 20:25:07 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18299999833106995, 0.2150000035762787]
+2026-08-20 20:25:07 | INFO     | airaire.train_gpu_v2 | VecEnv=SubprocVecEnv  n_envs=4
+2026-08-20 20:25:16 | INFO     | airaire.train_gpu_v2 | Loaded models\news_gpu_v2\checkpoint_2026-08-11.zip (n_steps=2048 batch=256 n_envs=4).
+2026-08-20 20:25:16 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_113_before_learn]: alloc=15 MB  reserved=34 MB  total=2048 MB  util=n/a
+2026-08-20 20:25:33 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_1]: alloc=23 MB  reserved=34 MB  total=2048 MB  util=n/a
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1.92e+03 |
+|    ep_rew_mean     | 337      |
+| time/              |          |
+|    fps             | 484      |
+|    iterations      | 1        |
+|    time_elapsed    | 16       |
+|    total_timesteps | 7348224  |
+---------------------------------
+2026-08-20 20:25:47 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_2]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 312          |
+| time/                   |              |
+|    fps                  | 535          |
+|    iterations           | 2            |
+|    time_elapsed         | 30           |
+|    total_timesteps      | 7356416      |
+| train/                  |              |
+|    approx_kl            | 0.0023835641 |
+|    clip_fraction        | 0.00713      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.5        |
+|    explained_variance   | 0.435        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 664          |
+|    n_updates            | 8970         |
+|    policy_gradient_loss | -0.000717    |
+|    std                  | 48.9         |
+|    value_loss           | 1.43e+03     |
+------------------------------------------
+2026-08-20 20:25:59 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_3]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 318          |
+| time/                   |              |
+|    fps                  | 572          |
+|    iterations           | 3            |
+|    time_elapsed         | 42           |
+|    total_timesteps      | 7364608      |
+| train/                  |              |
+|    approx_kl            | 0.0020874143 |
+|    clip_fraction        | 0.00652      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.5        |
+|    explained_variance   | 0.355        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 638          |
+|    n_updates            | 8980         |
+|    policy_gradient_loss | -0.000718    |
+|    std                  | 49           |
+|    value_loss           | 1.23e+03     |
+------------------------------------------
+2026-08-20 20:26:12 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_4]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 317          |
+| time/                   |              |
+|    fps                  | 589          |
+|    iterations           | 4            |
+|    time_elapsed         | 55           |
+|    total_timesteps      | 7372800      |
+| train/                  |              |
+|    approx_kl            | 0.0028400612 |
+|    clip_fraction        | 0.0181       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.5        |
+|    explained_variance   | 0.317        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 532          |
+|    n_updates            | 8990         |
+|    policy_gradient_loss | -0.00176     |
+|    std                  | 49.3         |
+|    value_loss           | 1.27e+03     |
+------------------------------------------
+2026-08-20 20:26:25 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_5]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 345          |
+| time/                   |              |
+|    fps                  | 594          |
+|    iterations           | 5            |
+|    time_elapsed         | 68           |
+|    total_timesteps      | 7380992      |
+| train/                  |              |
+|    approx_kl            | 0.0016694367 |
+|    clip_fraction        | 0.00333      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.5        |
+|    explained_variance   | 0.427        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 515          |
+|    n_updates            | 9000         |
+|    policy_gradient_loss | -0.000651    |
+|    std                  | 49.5         |
+|    value_loss           | 1.23e+03     |
+------------------------------------------
+2026-08-20 20:26:38 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_6]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 350          |
+| time/                   |              |
+|    fps                  | 602          |
+|    iterations           | 6            |
+|    time_elapsed         | 81           |
+|    total_timesteps      | 7389184      |
+| train/                  |              |
+|    approx_kl            | 0.0027169252 |
+|    clip_fraction        | 0.0132       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.6        |
+|    explained_variance   | 0.355        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 426          |
+|    n_updates            | 9010         |
+|    policy_gradient_loss | -0.00183     |
+|    std                  | 50.2         |
+|    value_loss           | 1.15e+03     |
+------------------------------------------
+2026-08-20 20:26:49 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_7]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 330          |
+| time/                   |              |
+|    fps                  | 622          |
+|    iterations           | 7            |
+|    time_elapsed         | 92           |
+|    total_timesteps      | 7397376      |
+| train/                  |              |
+|    approx_kl            | 0.0009845636 |
+|    clip_fraction        | 0.00376      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.6        |
+|    explained_variance   | 0.377        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 662          |
+|    n_updates            | 9020         |
+|    policy_gradient_loss | -0.000717    |
+|    std                  | 50.4         |
+|    value_loss           | 1.31e+03     |
+------------------------------------------
+2026-08-20 20:26:59 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_8]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 333          |
+| time/                   |              |
+|    fps                  | 638          |
+|    iterations           | 8            |
+|    time_elapsed         | 102          |
+|    total_timesteps      | 7405568      |
+| train/                  |              |
+|    approx_kl            | 0.0032791467 |
+|    clip_fraction        | 0.0152       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.7        |
+|    explained_variance   | 0.253        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 501          |
+|    n_updates            | 9030         |
+|    policy_gradient_loss | -0.000942    |
+|    std                  | 50.9         |
+|    value_loss           | 1.11e+03     |
+------------------------------------------
+2026-08-20 20:27:02 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_113_after_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:27:03 | INFO     | airaire.train_gpu_v2 | Saved models\news_gpu_v2\checkpoint_2026-08-12.zip
+2026-08-20 20:27:03 | INFO     | airaire.train_gpu_v2 | Window 113 PPO  approx_kl=0.0018  entropy_loss=-24.6864  clip_fraction=0.0062
+2026-08-20 20:27:03 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18299999833106995, 0.2150000035762787]
+2026-08-20 20:27:07 | INFO     | airaire.train_gpu_v2 | Window 113 metrics  return=0.1800  sharpe=0.0317  max_dd=0.0877  calmar=2.0539  equity=1180040.72  news_coverage=100.0%
+2026-08-20 20:27:07 | INFO     | airaire.train | Wrote training log -> models\news_gpu_v2\training_log.csv (snapshot rows=1); history models\news_gpu_v2\training_log_history.csv appended=1
+2026-08-20 20:27:07 | INFO     | airaire.train_gpu_v2 | Window 114/118  2026-07-10 -> 2026-08-13  bars=1950  timesteps=65536  n_envs=4  n_steps=2048  ppo_updates~8  news_coverage=100.0%
+2026-08-20 20:27:14 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.061000000685453415, 0.2630000114440918]
+2026-08-20 20:27:19 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.061000000685453415, 0.2630000114440918]
+2026-08-20 20:27:24 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.061000000685453415, 0.2630000114440918]
+2026-08-20 20:27:29 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.061000000685453415, 0.2630000114440918]
+2026-08-20 20:27:29 | INFO     | airaire.train_gpu_v2 | VecEnv=SubprocVecEnv  n_envs=4
+2026-08-20 20:27:29 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_114_before_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:27:36 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_1]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1.92e+03 |
+|    ep_rew_mean     | 352      |
+| time/              |          |
+|    fps             | 1183     |
+|    iterations      | 1        |
+|    time_elapsed    | 6        |
+|    total_timesteps | 7413760  |
+---------------------------------
+2026-08-20 20:27:46 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_2]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 364          |
+| time/                   |              |
+|    fps                  | 955          |
+|    iterations           | 2            |
+|    time_elapsed         | 17           |
+|    total_timesteps      | 7421952      |
+| train/                  |              |
+|    approx_kl            | 0.0024595102 |
+|    clip_fraction        | 0.00536      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.7        |
+|    explained_variance   | 0.28         |
+|    learning_rate        | 0.0003       |
+|    loss                 | 533          |
+|    n_updates            | 9050         |
+|    policy_gradient_loss | -0.000832    |
+|    std                  | 52           |
+|    value_loss           | 1.2e+03      |
+------------------------------------------
+2026-08-20 20:27:56 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_3]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 413          |
+| time/                   |              |
+|    fps                  | 891          |
+|    iterations           | 3            |
+|    time_elapsed         | 27           |
+|    total_timesteps      | 7430144      |
+| train/                  |              |
+|    approx_kl            | 0.0025988012 |
+|    clip_fraction        | 0.00946      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.8        |
+|    explained_variance   | 0.281        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 637          |
+|    n_updates            | 9060         |
+|    policy_gradient_loss | -0.0014      |
+|    std                  | 52.4         |
+|    value_loss           | 1.29e+03     |
+------------------------------------------
+2026-08-20 20:28:06 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_4]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 387          |
+| time/                   |              |
+|    fps                  | 865          |
+|    iterations           | 4            |
+|    time_elapsed         | 37           |
+|    total_timesteps      | 7438336      |
+| train/                  |              |
+|    approx_kl            | 0.0022576356 |
+|    clip_fraction        | 0.00758      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.8        |
+|    explained_variance   | 0.263        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 608          |
+|    n_updates            | 9070         |
+|    policy_gradient_loss | -0.00115     |
+|    std                  | 52.7         |
+|    value_loss           | 1.28e+03     |
+------------------------------------------
+2026-08-20 20:28:16 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_5]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 399          |
+| time/                   |              |
+|    fps                  | 854          |
+|    iterations           | 5            |
+|    time_elapsed         | 47           |
+|    total_timesteps      | 7446528      |
+| train/                  |              |
+|    approx_kl            | 0.0019600652 |
+|    clip_fraction        | 0.00802      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.8        |
+|    explained_variance   | 0.429        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 593          |
+|    n_updates            | 9080         |
+|    policy_gradient_loss | -0.00131     |
+|    std                  | 53           |
+|    value_loss           | 1.24e+03     |
+------------------------------------------
+2026-08-20 20:28:27 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_6]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 426          |
+| time/                   |              |
+|    fps                  | 845          |
+|    iterations           | 6            |
+|    time_elapsed         | 58           |
+|    total_timesteps      | 7454720      |
+| train/                  |              |
+|    approx_kl            | 0.0014095048 |
+|    clip_fraction        | 0.00703      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.9        |
+|    explained_variance   | 0.33         |
+|    learning_rate        | 0.0003       |
+|    loss                 | 556          |
+|    n_updates            | 9090         |
+|    policy_gradient_loss | -0.00103     |
+|    std                  | 53           |
+|    value_loss           | 1.44e+03     |
+------------------------------------------
+2026-08-20 20:28:37 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_7]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1.92e+03    |
+|    ep_rew_mean          | 416         |
+| time/                   |             |
+|    fps                  | 838         |
+|    iterations           | 7           |
+|    time_elapsed         | 68          |
+|    total_timesteps      | 7462912     |
+| train/                  |             |
+|    approx_kl            | 0.002692419 |
+|    clip_fraction        | 0.00916     |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -24.9       |
+|    explained_variance   | 0.352       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 618         |
+|    n_updates            | 9100        |
+|    policy_gradient_loss | -0.00164    |
+|    std                  | 53.3        |
+|    value_loss           | 1.31e+03    |
+-----------------------------------------
+2026-08-20 20:28:47 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_8]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 385          |
+| time/                   |              |
+|    fps                  | 833          |
+|    iterations           | 8            |
+|    time_elapsed         | 78           |
+|    total_timesteps      | 7471104      |
+| train/                  |              |
+|    approx_kl            | 0.0014638045 |
+|    clip_fraction        | 0.00649      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -24.9        |
+|    explained_variance   | 0.389        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 584          |
+|    n_updates            | 9110         |
+|    policy_gradient_loss | -0.000725    |
+|    std                  | 53.4         |
+|    value_loss           | 1.3e+03      |
+------------------------------------------
+2026-08-20 20:28:51 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_114_after_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:28:51 | INFO     | airaire.train_gpu_v2 | Saved models\news_gpu_v2\checkpoint_2026-08-13.zip
+2026-08-20 20:28:51 | INFO     | airaire.train_gpu_v2 | Window 114 PPO  approx_kl=0.0035  entropy_loss=-24.9100  clip_fraction=0.0135
+2026-08-20 20:28:51 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.061000000685453415, 0.2630000114440918]
+2026-08-20 20:28:54 | INFO     | airaire.train_gpu_v2 | Window 114 metrics  return=0.1662  sharpe=0.0303  max_dd=0.0864  calmar=1.9240  equity=1166204.12  news_coverage=100.0%
+2026-08-20 20:28:54 | INFO     | airaire.train | Wrote training log -> models\news_gpu_v2\training_log.csv (snapshot rows=2); history models\news_gpu_v2\training_log_history.csv appended=1
+2026-08-20 20:28:55 | INFO     | airaire.train_gpu_v2 | Window 115/118  2026-07-11 -> 2026-08-14  bars=1950  timesteps=65536  n_envs=4  n_steps=2048  ppo_updates~8  news_coverage=100.0%
+2026-08-20 20:29:00 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:29:05 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:29:11 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:29:16 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:29:16 | INFO     | airaire.train_gpu_v2 | VecEnv=SubprocVecEnv  n_envs=4
+2026-08-20 20:29:16 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_115_before_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:29:23 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_1]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1.92e+03 |
+|    ep_rew_mean     | 434      |
+| time/              |          |
+|    fps             | 1095     |
+|    iterations      | 1        |
+|    time_elapsed    | 7        |
+|    total_timesteps | 7479296  |
+---------------------------------
+2026-08-20 20:29:34 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_2]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1.92e+03    |
+|    ep_rew_mean          | 446         |
+| time/                   |             |
+|    fps                  | 909         |
+|    iterations           | 2           |
+|    time_elapsed         | 18          |
+|    total_timesteps      | 7487488     |
+| train/                  |             |
+|    approx_kl            | 0.002983095 |
+|    clip_fraction        | 0.0112      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -24.9       |
+|    explained_variance   | 0.366       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 633         |
+|    n_updates            | 9130        |
+|    policy_gradient_loss | -0.00145    |
+|    std                  | 54.1        |
+|    value_loss           | 1.3e+03     |
+-----------------------------------------
+2026-08-20 20:29:45 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_3]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 459          |
+| time/                   |              |
+|    fps                  | 848          |
+|    iterations           | 3            |
+|    time_elapsed         | 28           |
+|    total_timesteps      | 7495680      |
+| train/                  |              |
+|    approx_kl            | 0.0018635219 |
+|    clip_fraction        | 0.00699      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25          |
+|    explained_variance   | 0.258        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 678          |
+|    n_updates            | 9140         |
+|    policy_gradient_loss | -0.000731    |
+|    std                  | 54.4         |
+|    value_loss           | 1.29e+03     |
+------------------------------------------
+2026-08-20 20:29:55 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_4]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 450          |
+| time/                   |              |
+|    fps                  | 829          |
+|    iterations           | 4            |
+|    time_elapsed         | 39           |
+|    total_timesteps      | 7503872      |
+| train/                  |              |
+|    approx_kl            | 0.0020823542 |
+|    clip_fraction        | 0.004        |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25          |
+|    explained_variance   | 0.392        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 481          |
+|    n_updates            | 9150         |
+|    policy_gradient_loss | -0.000909    |
+|    std                  | 54.6         |
+|    value_loss           | 1.22e+03     |
+------------------------------------------
+2026-08-20 20:30:06 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_5]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 441          |
+| time/                   |              |
+|    fps                  | 816          |
+|    iterations           | 5            |
+|    time_elapsed         | 50           |
+|    total_timesteps      | 7512064      |
+| train/                  |              |
+|    approx_kl            | 0.0021327669 |
+|    clip_fraction        | 0.00604      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25          |
+|    explained_variance   | 0.336        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 577          |
+|    n_updates            | 9160         |
+|    policy_gradient_loss | -0.00091     |
+|    std                  | 54.4         |
+|    value_loss           | 1.35e+03     |
+------------------------------------------
+2026-08-20 20:30:17 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_6]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1.92e+03    |
+|    ep_rew_mean          | 420         |
+| time/                   |             |
+|    fps                  | 798         |
+|    iterations           | 6           |
+|    time_elapsed         | 61          |
+|    total_timesteps      | 7520256     |
+| train/                  |             |
+|    approx_kl            | 0.003480148 |
+|    clip_fraction        | 0.0255      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -25         |
+|    explained_variance   | 0.31        |
+|    learning_rate        | 0.0003      |
+|    loss                 | 496         |
+|    n_updates            | 9170        |
+|    policy_gradient_loss | -0.00274    |
+|    std                  | 54.3        |
+|    value_loss           | 1.13e+03    |
+-----------------------------------------
+2026-08-20 20:30:28 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_7]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 439          |
+| time/                   |              |
+|    fps                  | 794          |
+|    iterations           | 7            |
+|    time_elapsed         | 72           |
+|    total_timesteps      | 7528448      |
+| train/                  |              |
+|    approx_kl            | 0.0019201087 |
+|    clip_fraction        | 0.00792      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25          |
+|    explained_variance   | 0.284        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 472          |
+|    n_updates            | 9180         |
+|    policy_gradient_loss | -0.000954    |
+|    std                  | 54.5         |
+|    value_loss           | 1.08e+03     |
+------------------------------------------
+2026-08-20 20:30:38 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_8]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 466          |
+| time/                   |              |
+|    fps                  | 794          |
+|    iterations           | 8            |
+|    time_elapsed         | 82           |
+|    total_timesteps      | 7536640      |
+| train/                  |              |
+|    approx_kl            | 0.0017157764 |
+|    clip_fraction        | 0.00786      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25          |
+|    explained_variance   | 0.193        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 552          |
+|    n_updates            | 9190         |
+|    policy_gradient_loss | -0.00156     |
+|    std                  | 54.1         |
+|    value_loss           | 1.11e+03     |
+------------------------------------------
+2026-08-20 20:30:42 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_115_after_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:30:42 | INFO     | airaire.train_gpu_v2 | Saved models\news_gpu_v2\checkpoint_2026-08-14.zip
+2026-08-20 20:30:42 | INFO     | airaire.train_gpu_v2 | Window 115 PPO  approx_kl=0.0019  entropy_loss=-24.9831  clip_fraction=0.0124
+2026-08-20 20:30:42 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:30:46 | INFO     | airaire.train_gpu_v2 | Window 115 metrics  return=0.1115  sharpe=0.0215  max_dd=0.0907  calmar=1.2287  equity=1111489.23  news_coverage=100.0%
+2026-08-20 20:30:46 | INFO     | airaire.train | Wrote training log -> models\news_gpu_v2\training_log.csv (snapshot rows=3); history models\news_gpu_v2\training_log_history.csv appended=1
+2026-08-20 20:30:46 | INFO     | airaire.train_gpu_v2 | Window 116/118  2026-07-13 -> 2026-08-15  bars=1950  timesteps=65536  n_envs=4  n_steps=2048  ppo_updates~8  news_coverage=100.0%
+2026-08-20 20:30:52 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:30:57 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:31:02 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:31:07 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:31:07 | INFO     | airaire.train_gpu_v2 | VecEnv=SubprocVecEnv  n_envs=4
+2026-08-20 20:31:07 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_116_before_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:31:14 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_1]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1.92e+03 |
+|    ep_rew_mean     | 461      |
+| time/              |          |
+|    fps             | 1167     |
+|    iterations      | 1        |
+|    time_elapsed    | 7        |
+|    total_timesteps | 7544832  |
+---------------------------------
+2026-08-20 20:31:24 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_2]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 442          |
+| time/                   |              |
+|    fps                  | 946          |
+|    iterations           | 2            |
+|    time_elapsed         | 17           |
+|    total_timesteps      | 7553024      |
+| train/                  |              |
+|    approx_kl            | 0.0023734344 |
+|    clip_fraction        | 0.00724      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25          |
+|    explained_variance   | 0.27         |
+|    learning_rate        | 0.0003       |
+|    loss                 | 601          |
+|    n_updates            | 9210         |
+|    policy_gradient_loss | -0.00128     |
+|    std                  | 54.5         |
+|    value_loss           | 1.42e+03     |
+------------------------------------------
+2026-08-20 20:31:35 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_3]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 444          |
+| time/                   |              |
+|    fps                  | 885          |
+|    iterations           | 3            |
+|    time_elapsed         | 27           |
+|    total_timesteps      | 7561216      |
+| train/                  |              |
+|    approx_kl            | 0.0025430052 |
+|    clip_fraction        | 0.00686      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25          |
+|    explained_variance   | 0.193        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 692          |
+|    n_updates            | 9220         |
+|    policy_gradient_loss | -0.00118     |
+|    std                  | 54.7         |
+|    value_loss           | 1.38e+03     |
+------------------------------------------
+2026-08-20 20:31:45 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_4]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1.92e+03    |
+|    ep_rew_mean          | 437         |
+| time/                   |             |
+|    fps                  | 858         |
+|    iterations           | 4           |
+|    time_elapsed         | 38          |
+|    total_timesteps      | 7569408     |
+| train/                  |             |
+|    approx_kl            | 0.002976558 |
+|    clip_fraction        | 0.0163      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -25         |
+|    explained_variance   | 0.249       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 537         |
+|    n_updates            | 9230        |
+|    policy_gradient_loss | -0.00221    |
+|    std                  | 55.1        |
+|    value_loss           | 1.17e+03    |
+-----------------------------------------
+2026-08-20 20:31:56 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_5]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 409          |
+| time/                   |              |
+|    fps                  | 845          |
+|    iterations           | 5            |
+|    time_elapsed         | 48           |
+|    total_timesteps      | 7577600      |
+| train/                  |              |
+|    approx_kl            | 0.0014358528 |
+|    clip_fraction        | 0.00767      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.1        |
+|    explained_variance   | 0.148        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 554          |
+|    n_updates            | 9240         |
+|    policy_gradient_loss | -0.000916    |
+|    std                  | 55.4         |
+|    value_loss           | 1.24e+03     |
+------------------------------------------
+2026-08-20 20:32:06 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_6]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1.92e+03    |
+|    ep_rew_mean          | 397         |
+| time/                   |             |
+|    fps                  | 833         |
+|    iterations           | 6           |
+|    time_elapsed         | 58          |
+|    total_timesteps      | 7585792     |
+| train/                  |             |
+|    approx_kl            | 0.002265234 |
+|    clip_fraction        | 0.0078      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -25.1       |
+|    explained_variance   | 0.197       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 525         |
+|    n_updates            | 9250        |
+|    policy_gradient_loss | -0.00169    |
+|    std                  | 55.5        |
+|    value_loss           | 1.28e+03    |
+-----------------------------------------
+2026-08-20 20:32:17 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_7]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 392          |
+| time/                   |              |
+|    fps                  | 825          |
+|    iterations           | 7            |
+|    time_elapsed         | 69           |
+|    total_timesteps      | 7593984      |
+| train/                  |              |
+|    approx_kl            | 0.0028736563 |
+|    clip_fraction        | 0.0141       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.1        |
+|    explained_variance   | 0.2          |
+|    learning_rate        | 0.0003       |
+|    loss                 | 599          |
+|    n_updates            | 9260         |
+|    policy_gradient_loss | -0.00167     |
+|    std                  | 56.4         |
+|    value_loss           | 1.35e+03     |
+------------------------------------------
+2026-08-20 20:32:27 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_8]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1.92e+03    |
+|    ep_rew_mean          | 381         |
+| time/                   |             |
+|    fps                  | 821         |
+|    iterations           | 8           |
+|    time_elapsed         | 79          |
+|    total_timesteps      | 7602176     |
+| train/                  |             |
+|    approx_kl            | 0.003075188 |
+|    clip_fraction        | 0.0171      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -25.1       |
+|    explained_variance   | 0.293       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 691         |
+|    n_updates            | 9270        |
+|    policy_gradient_loss | -0.00183    |
+|    std                  | 57          |
+|    value_loss           | 1.33e+03    |
+-----------------------------------------
+2026-08-20 20:32:31 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_116_after_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:32:31 | INFO     | airaire.train_gpu_v2 | Saved models\news_gpu_v2\checkpoint_2026-08-15.zip
+2026-08-20 20:32:31 | INFO     | airaire.train_gpu_v2 | Window 116 PPO  approx_kl=0.0022  entropy_loss=-25.1740  clip_fraction=0.0054
+2026-08-20 20:32:31 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.03400000184774399, 0.10499999672174454, 0.18199999630451202, 0.25999999046325684]
+2026-08-20 20:32:34 | INFO     | airaire.train_gpu_v2 | Window 116 metrics  return=0.1185  sharpe=0.0228  max_dd=0.0911  calmar=1.3007  equity=1118463.02  news_coverage=100.0%
+2026-08-20 20:32:34 | INFO     | airaire.train | Wrote training log -> models\news_gpu_v2\training_log.csv (snapshot rows=4); history models\news_gpu_v2\training_log_history.csv appended=1
+2026-08-20 20:32:35 | INFO     | airaire.train_gpu_v2 | Window 117/118  2026-07-14 -> 2026-08-17  bars=1950  timesteps=65536  n_envs=4  n_steps=2048  ppo_updates~8  news_coverage=100.0%
+2026-08-20 20:32:40 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.24199999868869781, 0.0989999994635582, 0.28299999237060547]
+2026-08-20 20:32:46 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.24199999868869781, 0.0989999994635582, 0.28299999237060547]
+2026-08-20 20:32:51 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.24199999868869781, 0.0989999994635582, 0.28299999237060547]
+2026-08-20 20:32:55 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.24199999868869781, 0.0989999994635582, 0.28299999237060547]
+2026-08-20 20:32:55 | INFO     | airaire.train_gpu_v2 | VecEnv=SubprocVecEnv  n_envs=4
+2026-08-20 20:32:55 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_117_before_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:33:02 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_1]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1.92e+03 |
+|    ep_rew_mean     | 404      |
+| time/              |          |
+|    fps             | 1166     |
+|    iterations      | 1        |
+|    time_elapsed    | 7        |
+|    total_timesteps | 7610368  |
+---------------------------------
+2026-08-20 20:33:13 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_2]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 371          |
+| time/                   |              |
+|    fps                  | 944          |
+|    iterations           | 2            |
+|    time_elapsed         | 17           |
+|    total_timesteps      | 7618560      |
+| train/                  |              |
+|    approx_kl            | 0.0014049257 |
+|    clip_fraction        | 0.00247      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.2        |
+|    explained_variance   | 0.345        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 553          |
+|    n_updates            | 9290         |
+|    policy_gradient_loss | -0.000332    |
+|    std                  | 57.6         |
+|    value_loss           | 1.18e+03     |
+------------------------------------------
+2026-08-20 20:33:23 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_3]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 362          |
+| time/                   |              |
+|    fps                  | 891          |
+|    iterations           | 3            |
+|    time_elapsed         | 27           |
+|    total_timesteps      | 7626752      |
+| train/                  |              |
+|    approx_kl            | 0.0022750874 |
+|    clip_fraction        | 0.0104       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.2        |
+|    explained_variance   | 0.398        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 589          |
+|    n_updates            | 9300         |
+|    policy_gradient_loss | -0.000898    |
+|    std                  | 57.9         |
+|    value_loss           | 1.29e+03     |
+------------------------------------------
+2026-08-20 20:33:33 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_4]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 325          |
+| time/                   |              |
+|    fps                  | 856          |
+|    iterations           | 4            |
+|    time_elapsed         | 38           |
+|    total_timesteps      | 7634944      |
+| train/                  |              |
+|    approx_kl            | 0.0024599005 |
+|    clip_fraction        | 0.0175       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.2        |
+|    explained_variance   | 0.33         |
+|    learning_rate        | 0.0003       |
+|    loss                 | 493          |
+|    n_updates            | 9310         |
+|    policy_gradient_loss | -0.00226     |
+|    std                  | 58.3         |
+|    value_loss           | 1.15e+03     |
+------------------------------------------
+2026-08-20 20:33:44 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_5]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 343          |
+| time/                   |              |
+|    fps                  | 840          |
+|    iterations           | 5            |
+|    time_elapsed         | 48           |
+|    total_timesteps      | 7643136      |
+| train/                  |              |
+|    approx_kl            | 0.0026530642 |
+|    clip_fraction        | 0.0116       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.2        |
+|    explained_variance   | 0.387        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 670          |
+|    n_updates            | 9320         |
+|    policy_gradient_loss | -0.00144     |
+|    std                  | 58.4         |
+|    value_loss           | 1.28e+03     |
+------------------------------------------
+2026-08-20 20:33:55 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_6]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 338          |
+| time/                   |              |
+|    fps                  | 828          |
+|    iterations           | 6            |
+|    time_elapsed         | 59           |
+|    total_timesteps      | 7651328      |
+| train/                  |              |
+|    approx_kl            | 0.0024123327 |
+|    clip_fraction        | 0.01         |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.3        |
+|    explained_variance   | 0.377        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 648          |
+|    n_updates            | 9330         |
+|    policy_gradient_loss | -0.000939    |
+|    std                  | 59           |
+|    value_loss           | 1.33e+03     |
+------------------------------------------
+2026-08-20 20:34:06 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_7]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 331          |
+| time/                   |              |
+|    fps                  | 810          |
+|    iterations           | 7            |
+|    time_elapsed         | 70           |
+|    total_timesteps      | 7659520      |
+| train/                  |              |
+|    approx_kl            | 0.0012668617 |
+|    clip_fraction        | 0.00327      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.3        |
+|    explained_variance   | 0.347        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 666          |
+|    n_updates            | 9340         |
+|    policy_gradient_loss | -0.00092     |
+|    std                  | 59.1         |
+|    value_loss           | 1.35e+03     |
+------------------------------------------
+2026-08-20 20:34:17 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_8]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 358          |
+| time/                   |              |
+|    fps                  | 805          |
+|    iterations           | 8            |
+|    time_elapsed         | 81           |
+|    total_timesteps      | 7667712      |
+| train/                  |              |
+|    approx_kl            | 0.0038208126 |
+|    clip_fraction        | 0.0184       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.3        |
+|    explained_variance   | 0.326        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 680          |
+|    n_updates            | 9350         |
+|    policy_gradient_loss | -0.00204     |
+|    std                  | 59.8         |
+|    value_loss           | 1.3e+03      |
+------------------------------------------
+2026-08-20 20:34:20 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_117_after_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:34:20 | INFO     | airaire.train_gpu_v2 | Saved models\news_gpu_v2\checkpoint_2026-08-17.zip
+2026-08-20 20:34:20 | INFO     | airaire.train_gpu_v2 | Window 117 PPO  approx_kl=0.0019  entropy_loss=-25.3487  clip_fraction=0.0081
+2026-08-20 20:34:20 | INFO     | airaire.trading_env | News block aligned: bars=1950 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.24199999868869781, 0.0989999994635582, 0.28299999237060547]
+2026-08-20 20:34:24 | INFO     | airaire.train_gpu_v2 | Window 117 metrics  return=0.1065  sharpe=0.0201  max_dd=0.1057  calmar=1.0080  equity=1106538.47  news_coverage=100.0%
+2026-08-20 20:34:24 | INFO     | airaire.train | Wrote training log -> models\news_gpu_v2\training_log.csv (snapshot rows=5); history models\news_gpu_v2\training_log_history.csv appended=1
+2026-08-20 20:34:24 | INFO     | airaire.train_gpu_v2 | Window 118/118  2026-07-15 -> 2026-08-18  bars=1905  timesteps=65536  n_envs=4  n_steps=2048  ppo_updates~8  news_coverage=100.0%
+2026-08-20 20:34:30 | INFO     | airaire.trading_env | News block aligned: bars=1905 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.23999999463558197, 0.23100000619888306, 0.1720000058412552]
+2026-08-20 20:34:35 | INFO     | airaire.trading_env | News block aligned: bars=1905 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.23999999463558197, 0.23100000619888306, 0.1720000058412552]
+2026-08-20 20:34:40 | INFO     | airaire.trading_env | News block aligned: bars=1905 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.23999999463558197, 0.23100000619888306, 0.1720000058412552]
+2026-08-20 20:34:45 | INFO     | airaire.trading_env | News block aligned: bars=1905 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.23999999463558197, 0.23100000619888306, 0.1720000058412552]
+2026-08-20 20:34:45 | INFO     | airaire.train_gpu_v2 | VecEnv=SubprocVecEnv  n_envs=4
+2026-08-20 20:34:45 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_118_before_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:34:52 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_1]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 1.92e+03 |
+|    ep_rew_mean     | 369      |
+| time/              |          |
+|    fps             | 1196     |
+|    iterations      | 1        |
+|    time_elapsed    | 6        |
+|    total_timesteps | 7675904  |
+---------------------------------
+2026-08-20 20:35:02 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_2]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.92e+03     |
+|    ep_rew_mean          | 369          |
+| time/                   |              |
+|    fps                  | 957          |
+|    iterations           | 2            |
+|    time_elapsed         | 17           |
+|    total_timesteps      | 7684096      |
+| train/                  |              |
+|    approx_kl            | 0.0021045583 |
+|    clip_fraction        | 0.00793      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.4        |
+|    explained_variance   | 0.288        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 503          |
+|    n_updates            | 9370         |
+|    policy_gradient_loss | -0.00117     |
+|    std                  | 61.5         |
+|    value_loss           | 1.22e+03     |
+------------------------------------------
+2026-08-20 20:35:12 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_3]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-----------------------------------------
+| rollout/                |             |
+|    ep_len_mean          | 1.91e+03    |
+|    ep_rew_mean          | 366         |
+| time/                   |             |
+|    fps                  | 897         |
+|    iterations           | 3           |
+|    time_elapsed         | 27          |
+|    total_timesteps      | 7692288     |
+| train/                  |             |
+|    approx_kl            | 0.001522114 |
+|    clip_fraction        | 0.0103      |
+|    clip_range           | 0.2         |
+|    entropy_loss         | -25.4       |
+|    explained_variance   | 0.256       |
+|    learning_rate        | 0.0003      |
+|    loss                 | 634         |
+|    n_updates            | 9380        |
+|    policy_gradient_loss | -0.00108    |
+|    std                  | 62.1        |
+|    value_loss           | 1.3e+03     |
+-----------------------------------------
+2026-08-20 20:35:23 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_4]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.91e+03     |
+|    ep_rew_mean          | 374          |
+| time/                   |              |
+|    fps                  | 867          |
+|    iterations           | 4            |
+|    time_elapsed         | 37           |
+|    total_timesteps      | 7700480      |
+| train/                  |              |
+|    approx_kl            | 0.0026821953 |
+|    clip_fraction        | 0.00804      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.5        |
+|    explained_variance   | 0.354        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 694          |
+|    n_updates            | 9390         |
+|    policy_gradient_loss | -0.00104     |
+|    std                  | 62.7         |
+|    value_loss           | 1.29e+03     |
+------------------------------------------
+2026-08-20 20:35:33 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_5]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.91e+03     |
+|    ep_rew_mean          | 391          |
+| time/                   |              |
+|    fps                  | 850          |
+|    iterations           | 5            |
+|    time_elapsed         | 48           |
+|    total_timesteps      | 7708672      |
+| train/                  |              |
+|    approx_kl            | 0.0029216618 |
+|    clip_fraction        | 0.00825      |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.5        |
+|    explained_variance   | 0.275        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 610          |
+|    n_updates            | 9400         |
+|    policy_gradient_loss | -0.00239     |
+|    std                  | 62.8         |
+|    value_loss           | 1.39e+03     |
+------------------------------------------
+2026-08-20 20:35:43 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_6]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.91e+03     |
+|    ep_rew_mean          | 386          |
+| time/                   |              |
+|    fps                  | 840          |
+|    iterations           | 6            |
+|    time_elapsed         | 58           |
+|    total_timesteps      | 7716864      |
+| train/                  |              |
+|    approx_kl            | 0.0024019904 |
+|    clip_fraction        | 0.0157       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.5        |
+|    explained_variance   | 0.354        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 512          |
+|    n_updates            | 9410         |
+|    policy_gradient_loss | -0.00194     |
+|    std                  | 63.5         |
+|    value_loss           | 1.18e+03     |
+------------------------------------------
+2026-08-20 20:35:54 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_7]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 1.91e+03     |
+|    ep_rew_mean          | 397          |
+| time/                   |              |
+|    fps                  | 833          |
+|    iterations           | 7            |
+|    time_elapsed         | 68           |
+|    total_timesteps      | 7725056      |
+| train/                  |              |
+|    approx_kl            | 0.0021934398 |
+|    clip_fraction        | 0.0136       |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -25.5        |
+|    explained_variance   | 0.245        |
+|    learning_rate        | 0.0003       |
+|    loss                 | 559          |
+|    n_updates            | 9420         |
+|    policy_gradient_loss | -0.00175     |
+|    std                  | 64.1         |
+|    value_loss           | 1.2e+03      |
+------------------------------------------
+2026-08-20 20:36:04 | INFO     | airaire.train_gpu_v2 | GPU monitor [rollout_8]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+-------------------------------------------
+| rollout/                |               |
+|    ep_len_mean          | 1.9e+03       |
+|    ep_rew_mean          | 348           |
+| time/                   |               |
+|    fps                  | 829           |
+|    iterations           | 8             |
+|    time_elapsed         | 79            |
+|    total_timesteps      | 7733248       |
+| train/                  |               |
+|    approx_kl            | 0.00061484403 |
+|    clip_fraction        | 0.00404       |
+|    clip_range           | 0.2           |
+|    entropy_loss         | -25.6         |
+|    explained_variance   | 0.389         |
+|    learning_rate        | 0.0003        |
+|    loss                 | 599           |
+|    n_updates            | 9430          |
+|    policy_gradient_loss | -0.000468     |
+|    std                  | 63.9          |
+|    value_loss           | 1.32e+03      |
+-------------------------------------------
+2026-08-20 20:36:07 | INFO     | airaire.train_gpu_v2 | GPU monitor [window_118_after_learn]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a
+2026-08-20 20:36:07 | INFO     | airaire.train_gpu_v2 | Saved models\news_gpu_v2\checkpoint_2026-08-18.zip
+2026-08-20 20:36:07 | INFO     | airaire.train_gpu_v2 | Window 118 PPO  approx_kl=0.0021  entropy_loss=-25.5575  clip_fraction=0.0065
+2026-08-20 20:36:08 | INFO     | airaire.trading_env | News block aligned: bars=1905 coverage=100.0% sample=[0.30399999022483826, 0.12399999797344208, 0.23999999463558197, 0.23100000619888306, 0.1720000058412552]
+2026-08-20 20:36:11 | INFO     | airaire.train_gpu_v2 | Window 118 metrics  return=0.1637  sharpe=0.0311  max_dd=0.0893  calmar=1.8329  equity=1163692.67  news_coverage=100.0%
+2026-08-20 20:36:11 | INFO     | airaire.train | Wrote training log -> models\news_gpu_v2\training_log.csv (snapshot rows=6); history models\news_gpu_v2\training_log_history.csv appended=1
+2026-08-20 20:36:12 | INFO     | airaire.train | Wrote training log -> models\news_gpu_v2\training_log.csv (snapshot rows=6); history models\news_gpu_v2\training_log_history.csv appended=0
+2026-08-20 20:36:12 | INFO     | airaire.train_gpu_v2 | Best checkpoint Sharpe=0.0317 Calmar=2.0539 -> copied checkpoint_2026-08-12.zip to models\news_gpu_v2\best_model.zip
+2026-08-20 20:36:12 | INFO     | airaire.train_gpu_v2 | GPU monitor [finished]: alloc=37 MB  reserved=56 MB  total=2048 MB  util=n/a

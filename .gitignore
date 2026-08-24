@@ -15,3 +15,7 @@ data/logs/*.jsonl
 **/__pycache__/
 *.pyc
 state.pkl
+
+/_*.py
+/_*.txt
+/_*.ps1

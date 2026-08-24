@@ -1,59 +1,46 @@
 # AirAire
 
-- Paper-trading desk: PPO sizes five names (HK tech vs US defensive)
-- 10-minute prices, calendar features, and a news score
-- Alpha Vantage reads headlines; Futu OpenD places **SIMULATE** orders
-- Read-only site keeps the last book when the trader is offline
+A paper-trading desk that sizes five names from **10-minute prices**, a **calendar**, and a **news score**. PPO is the trader. Alpha Vantage is the analyst. Futu OpenD places **SIMULATE** orders only.
+
+The bet is not “predict tomorrow.” It is **see the headline and the bar a little earlier** than a slow trend-follower, in a noisy HK-tech vs US-defensive book.
 
 **Watch the paper book:** [airaire.vercel.app](https://airaire.vercel.app) (pw:Public)
 
-- Paper only. No real money. No warranty
-- Tomorrow the market will do something we did not predict
+- Paper only. No real money. No warranty.
+- Tomorrow the market will do something we did not predict.
+
+**Now (Aug 2026):** V2 is what the live loop loads (`models/news_gpu_v2/best_model.zip`, promoted Calmar ≈ 4.91). Phase 6 / V3 is a **parallel research retrain** — volume plus Hang Seng and S&P 500 in the observation. It is not live yet.
 
 ---
 
-## What we built
+## The idea
 
+HK tech and US defensives often pull against each other. A closed cash session **keeps** that side of the book (zeroing a closed name would flatten the open side). News is in the observation so the policy can rebalance when the tape has not moved yet.
 
-| Piece                              | What it does                                                                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `src/trading_env.py`               | Gymnasium env. State = 10-min prices + long-term HK×US features + calendar + `news_score` + inventory.           |
-| `src/train.py` / `train_gpu_v2.py` | Rolling 30-session-day PPO windows. v2 is the live trainer (8 updates / window, collapse guards).                |
-| `src/finetune_latest.py`           | Overnight 1-window fine-tune. Human **Promote** on Telegram. Never silent-overwrite `best_model.zip`.            |
-| `src/inference.py`                 | Live loop: 60s poll, order on a **new 10-min bar** or a **news jump ≥ 0.25**. Catch-up if you start late.        |
-| `src/news_loader.py`               | Alpha Vantage `NEWS_SENTIMENT` for training parquet **and** the live poller. Same score, plus titles for humans. |
-| `src/dashboard_push.py`            | Fail-open POST to Supabase. Closed-market rows are `kind=heartbeat` (keep-alive only).                           |
-| `dashboard/`                       | Next.js blotter on Vercel. Reads snapshots. Does not trade, does not call Alpha Vantage.                         |
+We treat **in-sample Calmar as homework**. A model that reprints +100% on the same 30 days it just trained has not earned the live zip. Promote is a human Telegram button. Paper P&L is the only honest test.
 
+---
+
+## How it works
+
+```text
+Bloomberg 10-min backbone  +  Alpha Vantage NEWS_SENTIMENT
+        ↓
+enhanced parquet (price + news_score + calendar / long-term features)
+        ↓
+PPO (rolling 30 session-day windows, 8 updates each)
+        ↓
+models/news_gpu_v2/best_model.zip     ← only this is live
+        ↓
+inference (60s poll) → Futu SIMULATE → Supabase snapshot → Vercel blotter
+```
 
 **Two APIs, do not mix them**
 
 - **Futu OpenD** — 10-min OHLCV, snapshots, `TrdEnv.SIMULATE` orders.
 - **Alpha Vantage** — headline sentiment only.
 
----
-
-## Universe
-
-Five names we can hold, plus two observers the policy cannot buy.
-
-
-| Role         | Ticker     | Name      |
-| ------------ | ---------- | --------- |
-| HK tech      | `HK.00700` | Tencent   |
-| HK tech      | `HK.03690` | Meituan   |
-| HK tech      | `HK.03750` | CATL      |
-| US defensive | `US.COST`  | Costco    |
-| US defensive | `US.KO`    | Coca-Cola |
-| Observer     | `HK.HSI`   | Hang Seng |
-| Observer     | `US.SPX`   | S&P 500   |
-
-
-A closed market **keeps** the position. Gating that name to action `0` would flatten the other book (US names during the HK session, and the reverse after 16:00 HKT).
-
----
-
-## How the live loop thinks
+The live loop does **not** rebalance every 60 seconds. It polls so it notices a new 10-minute close (or a news jump ≥ 0.25), then it may order.
 
 ```text
 run_trader.bat
@@ -67,18 +54,53 @@ run_trader.bat
         push live snapshot to Supabase
 ```
 
-Fine-tune is a different bat, after the US cash close (or overnight):
+Overnight (after the US cash close) is a different bat: one PPO window, then **Promote / Keep** on Telegram. Timeout = keep. We do **not** silent-overwrite the live zip, and we do **not** grind a full retrain into `models/news_gpu_v2` after the entropy collapse around window 90.
 
-```text
-run_finetune.bat
-  → Futu overlay (if OpenD is up)
-  → Alpha Vantage last ~30 days
-  → 1 PPO window from the newest checkpoint / finetuned zip
-  → PROMOTION CHECK vs live_best.json
-  → Telegram Promote / Keep (10 min). Timeout = keep.
-```
+---
 
-We **do not** retrain from Window ~90 (entropy collapse). We **do not** run a full `train_gpu_v2` into `models/news_gpu_v2`. Story: `[guide/PHRASE-4-FUTURE-FINETUNE-GUIDE.md](guide/PHRASE-4-FUTURE-FINETUNE-GUIDE.md)`.
+## Universe
+
+Five names we can hold, plus two observers the policy cannot buy. V2 **trains and infers on the five**. V3 **sees all seven** (still trades five).
+
+
+| Role         | Ticker     | Name      |
+| ------------ | ---------- | --------- |
+| HK tech      | `HK.00700` | Tencent   |
+| HK tech      | `HK.03690` | Meituan   |
+| HK tech      | `HK.03750` | CATL      |
+| US defensive | `US.COST`  | Costco    |
+| US defensive | `US.KO`    | Coca-Cola |
+| Observer     | `HK.HSI`   | Hang Seng |
+| Observer     | `US.SPX`   | S&P 500   |
+
+---
+
+## What we built
+
+
+| Piece                              | What it does                                                                                              |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `src/trading_env.py`               | Gymnasium env. State = 10-min prices + long-term HK×US features + calendar + `news_score` + inventory.    |
+| `src/train.py` / `train_gpu_v2.py` | Rolling 30-session-day PPO. Live trainer: 8 updates / window, collapse guards.                            |
+| `src/finetune_latest.py`           | Overnight 1-window fine-tune. Human **Promote**. Never silent-overwrite `best_model.zip`.                  |
+| `src/inference.py`                 | Live loop: 60s poll, order on a **new 10-min bar** or a **news jump ≥ 0.25**. Catch-up if you start late. |
+| `src/news_loader.py`               | Alpha Vantage for the training parquet **and** the live poller. Same score, plus titles for humans.       |
+| `src/dashboard_push.py`            | Fail-open POST to Supabase. Closed-market rows are `kind=heartbeat`.                                      |
+| `dashboard/`                       | Next.js blotter on Vercel. Reads snapshots. Does not trade, does not call Alpha Vantage.                  |
+| `src/*_v3.py`                      | Isolated Phase 6 research track. Writes `enhanced_v3.parquet` and `models/news_gpu_v3/` only.              |
+
+
+---
+
+## Phase 6 — V3 research (not live)
+
+V2’s volume channel was mostly zeros (Bloomberg). HSI and SPX sat in the parquet and never entered `model.predict()`. Changing that **changes the observation** (782 → **1082**), so V3 is a full retrain in new files. The live trader cannot load a V3 zip.
+
+**Data.** Same 6-month regime as V2 (`2026-02-24` → `2026-08-21`). Bloomberg keeps the price clock. TradingView overlays volume (ignore `TSE_DLY_3750` — Tokyo, not CATL). Futu supplies CATL volume only. News is copied from the V2 parquet so the extra information is volume + observers, not a new news tape.
+
+**Selection.** After each window we score the **next 5 session days** (not the homework window). `best_model.zip` is the rolling **median of the last 10 holdouts**, so one Trump Monday or weekend gap cannot veto a useful policy. That median is still not live P&L.
+
+Do not point `run_trader.bat` at V3. There is no live path yet that fetches HSI/SPX on the 60s poll. Runbook: [guide/PHRASE-6-IMPLEMENTED.md](guide/PHRASE-6-IMPLEMENTED.md). Fine-tune / collapse story: [guide/PHRASE-4-FUTURE-FINETUNE-GUIDE.md](guide/PHRASE-4-FUTURE-FINETUNE-GUIDE.md).
 
 ---
 
@@ -89,7 +111,7 @@ We **do not** retrain from Window ~90 (entropy collapse). We **do not** run a fu
 
 | File                        | Role                                                                                  |
 | --------------------------- | ------------------------------------------------------------------------------------- |
-| `best_model.zip`            | What inference loads. Started as Window 113 (Calmar ≈ 2.05). Changes only on Promote. |
+| `best_model.zip`            | What inference loads. Promoted only. Current bar ≈ Calmar 4.91 (window 121 lineage).  |
 | `checkpoint_2026-08-12.zip` | Original trading golden. Museum copy.                                                 |
 | `checkpoint_2026-08-18.zip` | Window 118 seed (Calmar ≈ 1.83) until a newer `finetuned_*.zip` exists.               |
 | `live_best.json`            | Calmar hurdle for the next Promote.                                                   |
@@ -98,6 +120,8 @@ We **do not** retrain from Window ~90 (entropy collapse). We **do not** run a fu
 
 
 `state.pkl` is the **paper book** (cash, holdings, last bar). Local only. Recreated as a cold start if missing — dangerous if Futu already has positions.
+
+`models/news_gpu_v3/` is research only.
 
 ---
 
@@ -162,7 +186,7 @@ Open `http://localhost:3000/login`. Gate password = `DASHBOARD_GATE`.
 
 Vercel: import this repo, **Root Directory =** `dashboard`. Env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `DASHBOARD_GATE`. **Never** put the Supabase service role or Alpha Vantage key on Vercel.
 
-SQL and snapshot contract: `[guide/PHRASE-5.md](guide/PHRASE-5.md)`.
+SQL and snapshot contract: [guide/PHRASE-5.md](guide/PHRASE-5.md).
 
 The header **TEST** button paints a local fake book so you can tune layout. It does not write Supabase. Turn it off before you demo the live row.
 
@@ -179,31 +203,35 @@ Equity Path counts **session snapshots only** (HK or US cash open). Heartbeats w
 
 The website stays up when the trader is offline. New trades need the trader process.
 
+V3 GPU train can share the same `venv_gpu` in another terminal. It writes a different folder and does not use OpenD once the parquet is cached.
+
 ---
 
 ## Layout
 
 ```text
-src/                 trader, trainers, news, dashboard push
-execution/           bats (copy next to OpenD)
-dashboard/           Next.js read-only site
-data/raw/bloomberg/  10-min base bars
-data/raw/news/       articles_*.csv + news_*.csv
-data/enhanced/       enhanced_data.parquet (price + news_score)
-models/news_gpu_v2/  live goldens
-models/old/          earlier runs (museum)
-guide/               runbooks — PHRASE-4-EXECUTION and PHRASE-5 win
-test/                one-shot API / Telegram / Futu pings
+src/                  trader, trainers, news, dashboard push
+execution/            bats (copy next to OpenD)
+dashboard/            Next.js read-only site
+data/raw/bloomberg/   10-min price backbone
+data/raw/tradingview/ volume overlay for V3 (ignore TSE_DLY_3750)
+data/raw/futu/v3/     CATL volume cache
+data/enhanced/        V2 parquet (live) + enhanced_v3.parquet
+models/news_gpu_v2/   live goldens
+models/news_gpu_v3/   Phase 6 research (not live)
+guide/                PHRASE-4 execution, PHRASE-5 dashboard, PHRASE-6-IMPLEMENTED
+test/                 one-shot API / Telegram / Futu pings
 ```
 
 ---
 
-## What we learned (short)
+## What we learned
 
 - Price-only PPO was a baseline. News in the observation is the point of the project.
-- A long GPU run can **entropy-collapse**. Rolling back to the last healthy checkpoint (Window 112 → re-do 113–118) beat grinding forward from a dead policy.
-- Sharpe on a 30-day window lied to us more than once. **Calmar** is the Promote bar.
+- A long GPU run can **entropy-collapse**. Rolling back to the last healthy checkpoint beat grinding forward from a dead policy.
+- Sharpe on a 30-day window lied more than once. **Calmar** is the Promote bar — and even Calmar on the train window is in-sample.
 - Poll every 60s so you notice the 10-min close; do not rebalance every 60s on the same bar.
+- Extra features that change obs dim need an isolated retrain. A one-week holdout is a fair live picture and a noisy contest; elect on a rolling median, then paper-trade.
 
 ---
 
