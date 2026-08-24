@@ -11,6 +11,10 @@ Own book: ``state_v3.pkl``. If that file is missing, the V2 leftover in
 ``state.pkl`` (cash, holdings, equity, news) is the starting book so V3 does
 not pretend the paper trade is flat. Own panel writes: ``enhanced_v3.parquet``.
 ``--predict-now`` first (no orders, no state write). Safe while V2 is running.
+
+Live V3 books ``state_v3.pkl`` / the blotter only when OpenD reports a fill or
+cancel. Working limits show as PENDING. A new buy is sent only if it is cheaper
+than a pending sell (and vice versa); otherwise the working order stays.
 """
 
 from __future__ import annotations
@@ -67,6 +71,7 @@ from src.utils import (
     TICKER_NAMES,
 )
 from src.dashboard_push import append_fill
+from src.order_lifecycle import decide_order
 
 logger = setup_logging("airaire.inference_v3")
 
@@ -389,6 +394,128 @@ def _clamp_delta(ticker: str, delta: int, current: float, *, reduce_only: bool) 
     return max(int(delta), -int(sellable))
 
 
+def _cap_ids(ids: list[str]) -> list[str]:
+    return [str(x) for x in ids if str(x)][-400:]
+
+
+def _remember_placed(state, order_id: str) -> None:
+    oid = str(order_id or "")
+    if not oid:
+        return
+    if oid not in state.placed_order_ids:
+        state.placed_order_ids.append(oid)
+    state.placed_order_ids = _cap_ids(state.placed_order_ids)
+
+
+def _mark_settled(state, order_id: str) -> None:
+    oid = str(order_id or "")
+    if not oid:
+        return
+    if oid not in state.settled_order_ids:
+        state.settled_order_ids.append(oid)
+    state.settled_order_ids = _cap_ids(state.settled_order_ids)
+
+
+def _apply_futu_fill(state, order: dict, *, persist_fills: bool, reason: str) -> None:
+    ticker = str(order.get("ticker") or "")
+    if ticker not in CORE_TICKERS:
+        return
+    qty = int(float(order.get("dealt_qty") or 0) or float(order.get("qty") or 0))
+    px = float(order.get("dealt_avg_price") or order.get("price") or 0.0)
+    if qty <= 0 or px <= 0:
+        return
+    side = str(order.get("side") or "BUY").upper()
+    if side == "BUY":
+        state.holdings[ticker] = float(state.holdings.get(ticker, 0.0)) + qty
+        state.cash -= qty * px
+        state.last_buy_px[ticker] = px
+    else:
+        state.holdings[ticker] = float(state.holdings.get(ticker, 0.0)) - qty
+        state.cash += qty * px
+        state.last_sell_px[ticker] = px
+    name = TICKER_NAMES.get(ticker, ticker)
+    line = reason or f"FILLED {side} {qty} {name} @ {px:.4f}"
+    logger.info("Booked fill (not submit): %s cash=%.2f holdings=%s", line, state.cash, state.holdings)
+    if persist_fills:
+        append_fill(
+            {
+                "time": datetime.now(tz=HK_TZ).isoformat(),
+                "ticker": ticker,
+                "side": side,
+                "qty": qty,
+                "price": px,
+                "reason": f"[V3] {line}",
+                "order_id": str(order.get("order_id") or ""),
+            }
+        )
+        send_telegram_alert(f"[V3] {line}")
+
+
+def settle_v3_orders(state, broker: FutuPaperBroker, *, persist_fills: bool) -> bool:
+    """Poll OpenD. Book pickle/dashboard only on fill or cancel, never on submit."""
+    try:
+        live = broker.list_orders()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("OpenD order list failed (%s). Leaving pending book unchanged.", exc)
+        return False
+    placed = set(state.placed_order_ids)
+    settled = set(state.settled_order_ids)
+    pending: list[dict] = []
+    changed = False
+    for order in live:
+        ticker = str(order.get("ticker") or "")
+        if ticker not in CORE_TICKERS:
+            continue
+        oid = str(order.get("order_id") or "")
+        kind = str(order.get("kind") or "")
+        if kind == "working":
+            name = TICKER_NAMES.get(ticker, ticker)
+            pending.append(
+                {
+                    **order,
+                    "reason": (
+                        f"PENDING {order.get('side')} {int(float(order.get('qty') or 0))} {name} "
+                        f"@ {float(order.get('price') or 0):.2f} (not a fill)"
+                    ),
+                }
+            )
+            continue
+        if oid not in placed or oid in settled:
+            continue
+        if kind == "filled":
+            _apply_futu_fill(state, order, persist_fills=persist_fills, reason="")
+            _mark_settled(state, oid)
+            changed = True
+        elif kind == "cancelled":
+            dealt = float(order.get("dealt_qty") or 0.0)
+            if dealt > 0:
+                part = dict(order)
+                part["qty"] = dealt
+                _apply_futu_fill(state, part, persist_fills=persist_fills, reason="partial fill before cancel")
+            if persist_fills:
+                append_fill(
+                    {
+                        "time": datetime.now(tz=HK_TZ).isoformat(),
+                        "ticker": ticker,
+                        "side": "CANCEL",
+                        "qty": int(float(order.get("qty") or 0) - dealt),
+                        "price": float(order.get("price") or 0.0),
+                        "reason": "CANCEL unfilled SIMULATE order — book unchanged.",
+                        "order_id": oid,
+                    }
+                )
+            logger.info("OpenD cancelled %s %s — pickle not reduced as a fill.", ticker, oid)
+            _mark_settled(state, oid)
+            changed = True
+    state.pending_orders = pending
+    if pending:
+        logger.info(
+            "OpenD pending: %s",
+            ", ".join(f"{p.get('side')} {int(float(p.get('qty') or 0))} {p.get('ticker')} @{float(p.get('price') or 0):.2f}" for p in pending),
+        )
+    return changed
+
+
 _shutdown = False
 
 
@@ -480,6 +607,9 @@ def run_loop(
 
         while not _shutdown:
             if not any_core_market_open():
+                settled = settle_v3_orders(state, broker, persist_fills=persist_state)
+                if persist_state and settled:
+                    _save_state(state, STATE_V3_PKL)
                 if predict_now:
                     logger.info(
                         "Both HK and US cash sessions closed. Predict-now still scores the last completed bar (no orders)."
@@ -514,6 +644,9 @@ def run_loop(
                     logger.warning("In-session V3 catch-up failed (%s). Using current env bar.", exc)
 
             prices = broker.snapshot_prices(CORE_TICKERS)
+            settled = settle_v3_orders(state, broker, persist_fills=persist_state)
+            if settled:
+                env.restore_portfolio(state.cash, state.holdings)
             now_loop = _hk_now()
             ready_keys = ready_cash_sessions(now_loop)
             any_session_ready = bool(ready_keys)
@@ -565,7 +698,6 @@ def run_loop(
                     bar_id,
                 )
 
-            traded = False
             for i, ticker in enumerate(CORE_TICKERS):
                 current = float(state.holdings.get(ticker, 0.0))
                 action_i = float(raw_action[i]) if i < len(raw_action) else 0.0
@@ -613,31 +745,78 @@ def run_loop(
                 if predict_now or not allow_orders or delta == 0:
                     continue
                 is_buy = delta > 0
-                ok, order_id = broker.place_order(ticker, abs(delta), px, is_buy=is_buy)
+                last_buy = state.last_buy_px.get(ticker)
+                last_sell = state.last_sell_px.get(ticker)
+                decision = decide_order(
+                    ticker=ticker,
+                    is_buy=is_buy,
+                    qty=int(abs(delta)),
+                    px=px,
+                    pending=list(state.pending_orders or []),
+                    last_buy_px=float(last_buy) if last_buy else None,
+                    last_sell_px=float(last_sell) if last_sell else None,
+                )
+                logger.info("%s%s", prefix, decision.reason)
+                if decision.action == "skip":
+                    continue
                 if dry_run:
                     logger.info(
-                        "[DRY-RUN] would %s %s qty=%s — book unchanged.",
+                        "[DRY-RUN] would %s %s qty=%s — book unchanged until fill.",
                         "BUY" if is_buy else "SELL",
                         ticker,
                         abs(delta),
                     )
                     continue
+                if decision.action == "replace":
+                    cancelled_ok = True
+                    for oid in decision.cancel_ids:
+                        if not oid:
+                            continue
+                        if broker.cancel_order(ticker, oid):
+                            _mark_settled(state, oid)
+                            append_fill(
+                                {
+                                    "time": datetime.now(tz=HK_TZ).isoformat(),
+                                    "ticker": ticker,
+                                    "side": "CANCEL",
+                                    "qty": int(abs(delta)),
+                                    "price": float(px),
+                                    "reason": f"[V3] {decision.reason}",
+                                    "order_id": oid,
+                                }
+                            )
+                            state.pending_orders = [
+                                row for row in state.pending_orders if str(row.get("order_id") or "") != oid
+                            ]
+                        else:
+                            cancelled_ok = False
+                    if not cancelled_ok:
+                        logger.warning("Could not cancel working %s order(s) — skip new order this cycle.", ticker)
+                        continue
+                ok, order_id = broker.place_order(ticker, abs(delta), px, is_buy=is_buy)
                 if ok:
-                    state.holdings[ticker] = current + delta
-                    state.cash -= delta * px
-                    traded = True
-                    append_fill(
+                    _remember_placed(state, order_id)
+                    state.pending_orders.append(
                         {
-                            "time": datetime.now(tz=HK_TZ).isoformat(),
+                            "order_id": order_id,
                             "ticker": ticker,
                             "side": "BUY" if is_buy else "SELL",
-                            "qty": int(abs(delta)),
+                            "qty": float(abs(delta)),
                             "price": float(px),
-                            "reason": f"[V3] {reason}",
-                            "order_id": order_id,
+                            "kind": "working",
+                            "status": "SUBMITTED",
+                            "time": datetime.now(tz=HK_TZ).isoformat(),
+                            "reason": f"PENDING {'BUY' if is_buy else 'SELL'} {int(abs(delta))} {TICKER_NAMES.get(ticker, ticker)} @ {px:.2f} (not a fill)",
                         }
                     )
-                    send_telegram_alert(f"[V3] {reason}")
+                    logger.info(
+                        "Submitted %s %s qty=%s @ %s order_id=%s — pickle unchanged until fill.",
+                        "BUY" if is_buy else "SELL",
+                        ticker,
+                        abs(delta),
+                        px,
+                        order_id,
+                    )
 
             if allow_orders:
                 state.last_order_bar = bar_id
@@ -645,7 +824,7 @@ def run_loop(
             state.equity = state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS)
             state.last_bar_datetime = str(env._current_dt())
             env.restore_portfolio(state.cash, state.holdings)
-            if persist_state and (traded or allow_orders):
+            if persist_state and (settled or allow_orders or state.pending_orders):
                 _save_state(state, STATE_V3_PKL)
             else:
                 logger.info("No fills this cycle. Equity≈%.2f cash=%.2f", state.equity, state.cash)

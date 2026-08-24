@@ -680,12 +680,24 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
                     <div className="fill-day">{group.day}</div>
                     {group.rows.map((fill, i) => {
                       const side = (fill.side || "").toUpperCase();
-                      const sideClass = side === "SELL" ? "sell" : side === "BUY" ? "buy" : "";
+                      const cancelled = side === "CANCEL" || side === "CANCELLED";
+                      const pending = side === "PENDING";
+                      const sideClass = pending
+                        ? "pending"
+                        : cancelled
+                          ? "cancel"
+                          : side === "SELL"
+                            ? "sell"
+                            : side === "BUY"
+                              ? "buy"
+                              : "";
                       return (
-                        <div key={`${fill.order_id}-${fill.time}-${i}`} className="fill-row">
+                        <div key={`${fill.order_id}-${fill.time}-${i}`} className={`fill-row${cancelled ? " is-cancelled" : ""}${pending ? " is-pending" : ""}`}>
                           <div className="fill-main">
                             <span className="fill-time">{hkClock(fill.time)}</span>
-                            <span className={`fill-side ${sideClass}`}>{side || "—"}</span>
+                            <span className={`fill-side ${sideClass}`}>
+                              {pending ? "PENDING" : cancelled ? "CANCEL" : side || "—"}
+                            </span>
                             <span className="fill-name">
                               {qty(fill.qty)} {TICKER_NAMES[fill.ticker] || fill.ticker}
                             </span>

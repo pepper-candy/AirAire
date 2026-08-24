@@ -631,6 +631,22 @@ body.dragging {
   background: rgba(224, 122, 106, 0.15);
 }
 
+.fill-side.cancel {
+  color: var(--muted);
+  background: rgba(128, 128, 128, 0.16);
+}
+
+.fill-side.pending {
+  color: var(--stale);
+  background: rgba(212, 165, 116, 0.18);
+}
+
+.fill-row.is-cancelled .fill-name,
+.fill-row.is-cancelled .fill-px {
+  text-decoration: line-through;
+  opacity: 0.72;
+}
+
 .fill-name {
   flex: 1 1 auto;
   min-width: 0;

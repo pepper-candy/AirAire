@@ -145,6 +145,17 @@ def build_snapshot(
 
 
 def snapshot_from_state(state: Any, headlines: dict[str, list[dict[str, Any]]] | None = None, kind: str = "live") -> dict[str, Any]:
+    from src.order_lifecycle import pending_fill_rows
+
+    fills = load_recent_fills()
+    have = {str(row.get("order_id") or "") for row in fills}
+    for row in pending_fill_rows(getattr(state, "pending_orders", None) or [], now_iso=hk_now_iso()):
+        oid = str(row.get("order_id") or "")
+        if oid and oid in have:
+            continue
+        fills.append(row)
+        if oid:
+            have.add(oid)
     return build_snapshot(
         kind=kind,
         cash=float(getattr(state, "cash", INITIAL_CASH)),
@@ -155,8 +166,66 @@ def snapshot_from_state(state: Any, headlines: dict[str, list[dict[str, Any]]] |
         last_bar_datetime=str(getattr(state, "last_bar_datetime", "") or ""),
         news_scores=dict(getattr(state, "news_scores", {}) or {}),
         headlines=headlines,
-        fills=load_recent_fills(),
+        fills=fills,
     )
+
+
+def fetch_latest_payload() -> dict[str, Any] | None:
+    """GET the newest blotter row. None if unset/failed."""
+    if not configured():
+        logger.error("Set DASHBOARD_PUSH_URL and DASHBOARD_PUSH_KEY in .env first.")
+        return None
+    url = f"{_rest_base()}/{SNAPSHOTS_TABLE}?select=id,created_at,kind,payload&order=created_at.desc&limit=1"
+    try:
+        resp = requests.get(url, headers=_headers(), timeout=15)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Fetch latest snapshot failed (%s).", exc)
+        return None
+    if resp.status_code >= 400:
+        logger.error("Fetch latest HTTP %s: %s", resp.status_code, (resp.text or "")[:240])
+        return None
+    try:
+        rows = resp.json()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Fetch latest JSON failed (%s).", exc)
+        return None
+    if not rows:
+        return None
+    payload = rows[0].get("payload")
+    return payload if isinstance(payload, dict) else None
+
+
+def rewrite_trades_jsonl(order_ids: set[str]) -> None:
+    """Mark matching blotter lines CANCEL so the next trader push keeps them cancelled."""
+    if not TRADES_JSONL.exists() or not order_ids:
+        return
+    try:
+        lines = TRADES_JSONL.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        logger.warning("Could not read %s (%s).", TRADES_JSONL, exc)
+        return
+    wanted = {str(x) for x in order_ids}
+    out: list[str] = []
+    changed = 0
+    for line in lines:
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            rec = json.loads(text)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        if isinstance(rec, dict) and str(rec.get("order_id") or "") in wanted:
+            if str(rec.get("side") or "").upper() != "CANCEL":
+                rec["side"] = "CANCEL"
+                rec["reason"] = "CANCEL unfilled limit — shares restored. " + str(rec.get("reason") or "")
+                changed += 1
+        out.append(json.dumps(rec, ensure_ascii=False, default=str))
+    tmp = TRADES_JSONL.with_suffix(".jsonl.tmp")
+    tmp.write_text("\n".join(out) + ("\n" if out else ""), encoding="utf-8")
+    tmp.replace(TRADES_JSONL)
+    logger.info("Rewrote %s (%d line(s) marked CANCEL).", TRADES_JSONL.name, changed)
 
 
 def push_snapshot(payload: dict[str, Any]) -> bool:
@@ -318,6 +387,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="INSERT one kind=seed row from data/raw/news (no Alpha Vantage).",
     )
     p.add_argument("--dry-run", action="store_true", help="With --seed-news: print counts, do not POST.")
+    p.add_argument(
+        "--correct-unfilled",
+        action="store_true",
+        help="Reverse unfilled CATL limit sells 8899494/8899530 in the blotter and state_v3.pkl.",
+    )
+    p.add_argument(
+        "--reconcile-futu",
+        action="store_true",
+        help="Compare state_v3.pkl / dashboard to Futu SIMULATE fills. Add --apply to write.",
+    )
+    p.add_argument(
+        "--apply",
+        action="store_true",
+        help="With --reconcile-futu: write pickle + dashboard from Futu fills.",
+    )
     return p.parse_args(argv)
 
 
@@ -327,5 +411,16 @@ if __name__ == "__main__":
         sys.exit(ping())
     if args.seed_news:
         sys.exit(seed_news(dry_run=args.dry_run))
-    logger.error("Use: python -m src.dashboard_push --ping | --seed-news [--dry-run]")
+    if args.correct_unfilled:
+        from src.correct_unfilled import run as _correct_unfilled
+
+        sys.exit(_correct_unfilled(dry_run=args.dry_run))
+    if args.reconcile_futu:
+        from src.reconcile_futu import run as _reconcile_futu
+
+        sys.exit(_reconcile_futu(apply=args.apply))
+    logger.error(
+        "Use: python -m src.dashboard_push --ping | --seed-news [--dry-run] | "
+        "--correct-unfilled | --reconcile-futu [--apply]"
+    )
     sys.exit(2)
