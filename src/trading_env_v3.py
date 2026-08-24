@@ -5,7 +5,8 @@ The price window is expanded to 7 tickers: 5 core + HSI + SPX (observers).
 Observers cannot be traded. Volume is whatever the V3 panel supplies
 (TradingView / Futu overlay); HSI is expected to stay 0.
 
-Do not import this module from ``inference.py``. Paper trading stays on V2.
+Do not import this module from ``inference.py``. Live V2 stays on the 782-dim env.
+``inference_v3.py`` is the paper path for V3 / V3.1 / V3.2.
 """
 
 from __future__ import annotations

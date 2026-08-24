@@ -1,14 +1,12 @@
-"""GPU trainer v3 — isolated research track.
+"""GPU trainer v3.2 — long-only on the same V3 panel as V3.1.
 
-Same PPO recipe as ``train_gpu_v2`` (8 updates/window, collapse guards).
-``best_model.zip`` is chosen on the next holdout session days, not on the
-window that was just trained. In-sample Calmar is still printed for comparison.
+Same PPO recipe, same ``enhanced_v3.parquet``, same 1082-dim observers.
+The env action is ``[0, 1]`` so the policy never shorts (Futu SIMULATE-honest).
 
-Default write: ``models/news_gpu_v3/``.
-Recent-slice (V3.1): ``--start 2026-06-15 --end 2026-08-21`` writes
-``models/news_gpu_v3_1/`` and will not overwrite the finished V3 run.
-Holdout still walks the full ``enhanced_v3.parquet`` so late windows can
-use Aug 17–21. Do not import this from the live trader.
+Default: same slice as V3.1 (2026-06-15 → 2026-08-21) into
+``models/news_gpu_v3_2/``. Holdout still walks the full parquet.
+
+Do not import this from the live trader. Do not warm-start from V2/V3/V3.1 zips.
 """
 
 from __future__ import annotations
@@ -32,7 +30,7 @@ from src.data_loader_v3 import (  # noqa: E402
     NEWS_GPU_V3_MODELS_DIR,
     load_enhanced_v3,
 )
-from src.trading_env_v3 import LOOKBACK_BARS, TradingEnv, news_obs_slice  # noqa: E402
+from src.trading_env_v3_2 import LOOKBACK_BARS, TradingEnv, news_obs_slice  # noqa: E402
 from src.train import (  # noqa: E402
     EVAL_RETURN_CLIP,
     EVAL_SHARPE_CLIP,
@@ -47,14 +45,14 @@ from src.train_gpu_v2 import (  # noqa: E402
 )
 from src.utils import CORE_TICKERS, INITIAL_CASH, MODELS_DIR, NEWS_GPU_V2_MODELS_DIR, setup_logging  # noqa: E402
 
-logger = setup_logging("airaire.train_gpu_v3")
+logger = setup_logging("airaire.train_gpu_v3_2")
 
 DEFAULT_HOLDOUT_DAYS = 5
 DEFAULT_HOLDOUT_SMOOTH = 10
 MIN_HOLDOUTS_FOR_BEST = 3
 DEFAULT_SLICE_START = "2026-06-15"
 DEFAULT_SLICE_END = "2026-08-21"
-NEWS_GPU_V3_1_MODELS_DIR = MODELS_DIR / "news_gpu_v3_1"
+NEWS_GPU_V3_2_MODELS_DIR = MODELS_DIR / "news_gpu_v3_2"
 _FORCE_REBUILD = False
 _SKIP_FUTU = False
 _HOLDOUT_DAYS = DEFAULT_HOLDOUT_DAYS
@@ -63,11 +61,15 @@ _SLICE_START: pd.Timestamp | None = None
 _SLICE_END: pd.Timestamp | None = None
 _FULL_PANEL: pd.DataFrame | None = None
 _HOLDOUT_HISTORY: list[tuple[float, float, float]] = []
-_V2_FORBIDDEN = frozenset(
+_FORBIDDEN = frozenset(
     {
         NEWS_GPU_V2_MODELS_DIR.resolve(),
         (MODELS_DIR / "news").resolve(),
         (MODELS_DIR / "news_gpu").resolve(),
+        NEWS_GPU_V3_MODELS_DIR.resolve(),
+        (MODELS_DIR / "news_gpu_v3_1").resolve(),
+        (MODELS_DIR / "news_gpu_v4").resolve(),
+        (MODELS_DIR / "news_gpu_v4_1").resolve(),
     }
 )
 
@@ -81,32 +83,30 @@ def _parse_day(raw: str | None) -> pd.Timestamp | None:
     return ts.normalize()
 
 
-def _guard_output(path: Path, *, slice_run: bool = False) -> Path:
+def _guard_output(path: Path) -> Path:
     resolved = Path(path).resolve()
-    if resolved in _V2_FORBIDDEN:
-        raise ValueError(f"V3 refuses to write to {path}. Use models/news_gpu_v3 or models/news_gpu_v3_1.")
-    if slice_run and resolved == NEWS_GPU_V3_MODELS_DIR.resolve():
-        raise ValueError(
-            "Slice / V3.1 refuses to overwrite models/news_gpu_v3. "
-            "Use --output models/news_gpu_v3_1."
-        )
+    if resolved in _FORBIDDEN:
+        raise ValueError(f"V3.2 refuses to write to {path}. Use models/news_gpu_v3_2.")
     return Path(path)
 
 
 def _guard_init_checkpoint(path: Path | None) -> Path | None:
     if path is None:
         return None
-    text = str(Path(path)).replace("\\", "/")
-    if "news_gpu_v2" in text:
+    parts = Path(path).resolve().parts
+    if "news_gpu_v3_2" in parts:
+        return Path(path)
+    blocked = {"news_gpu_v2", "news_gpu_v3", "news_gpu_v3_1", "news", "news_gpu", "news_gpu_v4", "news_gpu_v4_1"}
+    if any(part in blocked for part in parts):
         raise ValueError(
-            "V3 cannot warm-start from a V2 zip — observation_dim changed "
-            "(5-name OHLCV vs 5+2 observers). Train V3 from scratch (no --init-checkpoint)."
+            "V3.2 cannot warm-start from a V2/V3/V3.1 zip — actions are [0, 1] long-only. "
+            "Train V3.2 from scratch (no --init-checkpoint)."
         )
     return Path(path)
 
 
 def _env_thunk(df: pd.DataFrame, news_df: pd.DataFrame | None, window_days: int):
-    """Must live in this module so Subproc workers import TradingEnv from v3."""
+    """Must live in this module so Subproc workers import TradingEnv from v3.2."""
 
     def _init() -> Monitor:
         env = TradingEnv(
@@ -130,13 +130,13 @@ def make_vec_env(
     if cfg.use_subproc and cfg.n_envs > 1:
         try:
             env = SubprocVecEnv(fns)
-            logger.info("VecEnv=SubprocVecEnv  n_envs=%d  (V3 env)", cfg.n_envs)
+            logger.info("VecEnv=SubprocVecEnv  n_envs=%d  (V3.2 long-only env)", cfg.n_envs)
             return env
         except Exception as exc:  # noqa: BLE001
             logger.warning("SubprocVecEnv failed (%s). Falling back to DummyVecEnv.", exc)
             cfg.use_subproc = False
     env = DummyVecEnv(fns)
-    logger.info("VecEnv=DummyVecEnv  n_envs=%d  (V3 env)", cfg.n_envs)
+    logger.info("VecEnv=DummyVecEnv  n_envs=%d  (V3.2 long-only env)", cfg.n_envs)
     return env
 
 
@@ -158,7 +158,7 @@ def _slice_panel(panel: pd.DataFrame) -> pd.DataFrame:
         mask &= dt < (_SLICE_END + pd.Timedelta(days=1))
     out = panel.loc[mask].copy()
     logger.info(
-        "V3.1 train slice %s → %s  rows=%d/%d  session_days~%d",
+        "V3.2 train slice %s → %s  rows=%d/%d  session_days~%d",
         None if _SLICE_START is None else _SLICE_START.date(),
         None if _SLICE_END is None else _SLICE_END.date(),
         len(out),
@@ -192,7 +192,7 @@ def _load_enhanced_for_v2_train(force_news_fetch: bool = False, **_kwargs):
     )
 
 
-def _load_processed_v3() -> pd.DataFrame:
+def _load_processed_panel() -> pd.DataFrame:
     return _remember_panel(load_enhanced_v3(save=True, fetch_futu=not _SKIP_FUTU, force_rebuild=_FORCE_REBUILD))
 
 
@@ -317,6 +317,7 @@ def evaluate_holdout(
         except ValueError:
             action = hold
         action = np.nan_to_num(np.asarray(action, dtype=np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+        action = np.clip(action, 0.0, 1.0)
         obs, _, terminated, truncated, _ = env.step(action)
         steps += 1
         if terminated or truncated or not np.all(np.isfinite(obs)):
@@ -344,7 +345,7 @@ def evaluate_holdout(
     return _clip_eval(cum_ret, sharpe, max_dd, end_eq)
 
 
-def checkpoint_sort_key_v3(cum_ret: float, sharpe: float, max_dd: float) -> tuple[float, float, float]:
+def checkpoint_sort_key_v3_2(cum_ret: float, sharpe: float, max_dd: float) -> tuple[float, float, float]:
     """Pick best_model from a rolling median of holdouts, not one noisy week."""
     empty = abs(float(cum_ret)) < 1e-15 and abs(float(sharpe)) < 1e-15 and abs(float(max_dd)) < 1e-15
     if empty:
@@ -373,8 +374,8 @@ def checkpoint_sort_key_v3(cum_ret: float, sharpe: float, max_dd: float) -> tupl
     return (med_ret, med_calmar, -med_dd)
 
 
-def evaluate_policy_v3(model, df, window_days, news_df=None):
-    """V3 scorer: log in-sample, return holdout metrics for best_model / training_log."""
+def evaluate_policy_v3_2(model, df, window_days, news_df=None):
+    """V3.2 scorer: log in-sample, return holdout metrics for best_model / training_log."""
     try:
         ins = _evaluate_in_sample(model, df, window_days, news_df)
         logger.info(
@@ -390,7 +391,7 @@ def evaluate_policy_v3(model, df, window_days, news_df=None):
 
 
 def _patch_shared_modules(*, output_dir: Path) -> None:
-    """Point v2 trainer helpers at V3 env/data without editing V2 files on disk."""
+    """Point v2 trainer helpers at V3.2 env/data without editing V2 files on disk."""
     import src.train as train_mod
     import src.train_gpu_v2 as v2
 
@@ -400,19 +401,19 @@ def _patch_shared_modules(*, output_dir: Path) -> None:
 
     train_mod.TradingEnv = TradingEnv
     train_mod.news_obs_slice = news_obs_slice
-    train_mod.evaluate_policy = evaluate_policy_v3
-    train_mod.checkpoint_sort_key = checkpoint_sort_key_v3
+    train_mod.evaluate_policy = evaluate_policy_v3_2
+    train_mod.checkpoint_sort_key = checkpoint_sort_key_v3_2
     train_mod._sanitize_panel = _sanitize_and_slice
     v2.TradingEnv = TradingEnv
     v2.LOOKBACK_BARS = LOOKBACK_BARS
     v2.ENHANCED_PARQUET = ENHANCED_V3_PARQUET
     v2.NEWS_GPU_V2_MODELS_DIR = output_dir
     v2.load_enhanced_data = _load_enhanced_for_v2_train
-    v2.load_processed = _load_processed_v3
+    v2.load_processed = _load_processed_panel
     v2.make_vec_env = make_vec_env
     v2._env_thunk = _env_thunk
-    v2.evaluate_policy = evaluate_policy_v3
-    v2.checkpoint_sort_key = checkpoint_sort_key_v3
+    v2.evaluate_policy = evaluate_policy_v3_2
+    v2.checkpoint_sort_key = checkpoint_sort_key_v3_2
     v2._sanitize_panel = _sanitize_and_slice
 
 
@@ -444,15 +445,12 @@ def train(
     _HOLDOUT_HISTORY = []
     _SLICE_START = _parse_day(panel_start)
     _SLICE_END = _parse_day(panel_end)
-    slice_run = _SLICE_START is not None or _SLICE_END is not None
-    if output is None:
-        output = NEWS_GPU_V3_1_MODELS_DIR if slice_run else NEWS_GPU_V3_MODELS_DIR
-    output_dir = _guard_output(output, slice_run=slice_run)
+    output_dir = _guard_output(output or NEWS_GPU_V3_2_MODELS_DIR)
     init_checkpoint = _guard_init_checkpoint(init_checkpoint)
     _patch_shared_modules(output_dir=output_dir)
     logger.info(
-        "GPU v3  output=%s  panel=%s  desired_updates=%d  observers=HSI+SPX  "
-        "train_slice=%s..%s  fetch_futu=%s  holdout_days=%d  "
+        "GPU v3.2 long-only  output=%s  panel=%s  desired_updates=%d  observers=HSI+SPX  "
+        "action=[0,1]  train_slice=%s..%s  fetch_futu=%s  holdout_days=%d  "
         "holdout_smooth=%d (best_model = rolling median of holdouts, not one week)",
         output_dir,
         ENHANCED_V3_PARQUET,
@@ -478,30 +476,30 @@ def train(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="AirAire GPU PPO trainer v3 (isolated; does not touch V2).")
+    p = argparse.ArgumentParser(description="AirAire GPU PPO trainer v3.2 (long-only; same V3 parquet as V3.1).")
     p.add_argument("--test", action="store_true", help="Train a single window and skip saving models.")
     p.add_argument("--epochs", type=int, default=10, help="Lower-bound passes over each window (also forces 8 PPO updates).")
     p.add_argument("--window-days", type=int, default=30, help="Session days per window (default: 30).")
     p.add_argument(
         "--output",
         type=Path,
-        default=None,
-        help="Checkpoint directory. Default models/news_gpu_v3, or models/news_gpu_v3_1 when --start/--end is set.",
+        default=NEWS_GPU_V3_2_MODELS_DIR,
+        help="Checkpoint directory (default: models/news_gpu_v3_2). Cannot be a V2/V3/V3.1 folder.",
     )
     p.add_argument(
         "--start",
-        default=None,
-        help="Train-window start (YYYY-MM-DD). Holdout still uses the full parquet after each window.",
+        default=DEFAULT_SLICE_START,
+        help="Train-window start (YYYY-MM-DD). Default matches V3.1: 2026-06-15.",
     )
     p.add_argument(
         "--end",
-        default=None,
-        help="Train-window end (YYYY-MM-DD). V3.1 default pair: 2026-06-15 … 2026-08-21.",
+        default=DEFAULT_SLICE_END,
+        help="Train-window end (YYYY-MM-DD). Default matches V3.1: 2026-08-21.",
     )
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--device", default="cuda", choices=("cpu", "cuda", "auto"))
-    p.add_argument("--resume", type=int, default=0, help="1-based window index; loads the previous V3 checkpoint.")
-    p.add_argument("--init-checkpoint", type=Path, default=None, help="Warm-start from a V3 (not V2) SB3 zip.")
+    p.add_argument("--resume", type=int, default=0, help="1-based window index; loads the previous V3.2 checkpoint.")
+    p.add_argument("--init-checkpoint", type=Path, default=None, help="Warm-start from a V3.2 (not V2/V3) SB3 zip.")
     p.add_argument("--no-news", action="store_true")
     p.add_argument("--force-news-fetch", action="store_true")
     p.add_argument("--force-rebuild", action="store_true", help="Rebuild enhanced_v3.parquet from Bloomberg+TV+Futu.")
