@@ -437,6 +437,8 @@ def drop_incomplete_klines(
         )
     if not kept:
         return out.iloc[0:0].reset_index(drop=True)
+    if len(kept) == 1:
+        return kept[0].sort_values(["datetime", "ticker"]).reset_index(drop=True)
     return pd.concat(kept, ignore_index=True).sort_values(["datetime", "ticker"]).reset_index(drop=True)
 
 
@@ -602,7 +604,21 @@ def overlay_live_ohlcv(
     if "sentiment_score" in base.columns and "sentiment_score" not in fresh.columns:
         fresh["sentiment_score"] = pd.NA
 
-    merged = pd.concat([base, fresh], ignore_index=True, sort=False)
+    parts = [frame for frame in (base, fresh) if frame is not None and not frame.empty]
+    if not parts:
+        return drop_incomplete_klines(pd.DataFrame(columns=STANDARD_COLUMNS), now=now)
+    if len(parts) == 1:
+        merged = parts[0].copy()
+    else:
+        aligned = []
+        cols = list(dict.fromkeys(c for frame in parts for c in frame.columns))
+        for frame in parts:
+            extra = frame.copy()
+            for col in cols:
+                if col not in extra.columns:
+                    extra[col] = pd.NA
+            aligned.append(extra[cols])
+        merged = pd.concat(aligned, ignore_index=True, sort=False)
     merged = merged.dropna(subset=["datetime", "ticker"])
     merged = merged.sort_values(["ticker", "datetime"])
     merged = merged.drop_duplicates(subset=["ticker", "datetime"], keep="last")

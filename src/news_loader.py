@@ -781,16 +781,48 @@ def load_all_news(
     return news.reset_index(drop=True)
 
 
+def probe_live_news(api_key: str | None = None) -> int:
+    """One NEWS_SENTIMENT call per core ticker. Prints counts so a live-poller bug is obvious."""
+    key = api_key or _api_key()
+    if not key:
+        print("ALPHAVANTAGE_API_KEY unset. Cannot probe.")
+        return 2
+    print("Alpha Vantage NEWS_SENTIMENT probe (same path as NewsPoller):")
+    empty = 0
+    for ticker in CORE_TICKERS:
+        symbols = av_symbols_for(ticker)
+        score, headlines = latest_ticker_news(ticker, api_key=key)
+        n = len(headlines)
+        if n == 0:
+            empty += 1
+        print(f"  {ticker:<10} aliases={','.join(symbols):<16} score={score:+.3f}  headlines={n}")
+        for row in headlines[:2]:
+            title = str(row.get("title") or "")[:88]
+            print(f"             {row.get('time_published')}  {title}")
+    print("")
+    if empty == len(CORE_TICKERS):
+        print("All five empty — key/rate-limit/API, not a per-ticker mapping bug.")
+        return 1
+    if empty:
+        print("Some names empty (HK ADR/A-share aliases often return no feed). US COST/KO should be >0 if the key works.")
+    else:
+        print("All five returned headlines. Live poller code path is fine.")
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Fetch / cache Alpha Vantage news sentiment")
     p.add_argument("--start", default="2026-02-24")
     p.add_argument("--end", default=None, help="Inclusive end date (default: now)")
     p.add_argument("--force", action="store_true", help="Re-query Alpha Vantage even if cache covers the range.")
+    p.add_argument("--probe", action="store_true", help="One live NEWS_SENTIMENT call per ticker; print headline counts.")
     return p.parse_args(argv)
 
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.probe:
+        raise SystemExit(probe_live_news())
     end = args.end or str(pd.Timestamp.now().date())
     panel = load_all_news(args.start, end, force_fetch=args.force)
     print(panel.head() if not panel.empty else "No news rows (API missing or empty feed).")

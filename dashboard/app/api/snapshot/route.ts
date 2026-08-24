@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { fetchSnapshots } from "@/lib/supabase";
+import { fetchLatest } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const data = await fetchSnapshots();
+  const data = await fetchLatest();
   return NextResponse.json(data);
 }

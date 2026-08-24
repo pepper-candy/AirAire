@@ -63,6 +63,7 @@ from src.utils import (
     INITIAL_CASH,
     INFERENCE_MODEL_PATH,
     LOT_SIZES,
+    US_INITIAL_CASH,
     NEWS_GPU_V2_MODELS_DIR,
     NEWS_MIN_INTERVAL_SECONDS,
     STATE_PKL,
@@ -72,9 +73,14 @@ from src.utils import (
     is_cash_open_bar_complete,
     is_kline_complete,
     is_ticker_market_open,
+    live_session_clock,
+    need_panel_refresh,
+    panel_seek_now,
     ready_cash_sessions,
     seconds_until_next_open,
+    session_bar_id,
     session_date_iso,
+    round_to_tick,
     send_telegram_alert,
     setup_logging,
     ticker_market,
@@ -93,6 +99,7 @@ futu_limiter = RateLimiter()
 class BotState:
     holdings: dict[str, float] = field(default_factory=lambda: {t: 0.0 for t in CORE_TICKERS})
     cash: float = INITIAL_CASH
+    us_cash: float = US_INITIAL_CASH
     last_action: dict[str, float] = field(default_factory=lambda: {t: 0.0 for t in CORE_TICKERS})
     last_reason: str = "cold start"
     realized_pnl: float = 0.0
@@ -102,6 +109,11 @@ class BotState:
     last_bar_datetime: str = ""
     last_order_bar: str = ""
     last_session_ready: dict[str, str] = field(default_factory=dict)
+    pending_orders: list[dict[str, Any]] = field(default_factory=list)
+    placed_order_ids: list[str] = field(default_factory=list)
+    settled_order_ids: list[str] = field(default_factory=list)
+    last_buy_px: dict[str, float] = field(default_factory=dict)
+    last_sell_px: dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -115,9 +127,19 @@ class BotState:
         last_action.update({k: float(v) for k, v in (raw.get("last_action") or {}).items() if k in last_action})
         news_scores = dict(base.news_scores)
         news_scores.update({k: float(v) for k, v in (raw.get("news_scores") or {}).items() if k in news_scores})
+        last_buy_px = {
+            str(k): float(v) for k, v in (raw.get("last_buy_px") or {}).items() if str(k) in holdings
+        }
+        last_sell_px = {
+            str(k): float(v) for k, v in (raw.get("last_sell_px") or {}).items() if str(k) in holdings
+        }
+        pending = [dict(row) for row in (raw.get("pending_orders") or []) if isinstance(row, dict)]
+        placed = [str(x) for x in (raw.get("placed_order_ids") or []) if str(x)][-400:]
+        settled = [str(x) for x in (raw.get("settled_order_ids") or []) if str(x)][-400:]
         return cls(
             holdings=holdings,
             cash=float(raw.get("cash", INITIAL_CASH)),
+            us_cash=float(raw.get("us_cash", US_INITIAL_CASH)),
             last_action=last_action,
             last_reason=str(raw.get("last_reason", "loaded from disk")),
             realized_pnl=float(raw.get("realized_pnl", 0.0)),
@@ -129,6 +151,11 @@ class BotState:
             last_session_ready={
                 str(k): str(v) for k, v in (raw.get("last_session_ready") or {}).items()
             },
+            pending_orders=pending,
+            placed_order_ids=placed,
+            settled_order_ids=settled,
+            last_buy_px=last_buy_px,
+            last_sell_px=last_sell_px,
         )
 
 
@@ -147,6 +174,7 @@ def load_state(path: Path = STATE_PKL) -> BotState:
         for key in (
             "holdings",
             "cash",
+            "us_cash",
             "last_action",
             "last_reason",
             "realized_pnl",
@@ -156,6 +184,11 @@ def load_state(path: Path = STATE_PKL) -> BotState:
             "last_bar_datetime",
             "last_order_bar",
             "last_session_ready",
+            "pending_orders",
+            "placed_order_ids",
+            "settled_order_ids",
+            "last_buy_px",
+            "last_sell_px",
         ):
             if hasattr(raw, key):
                 payload[key] = getattr(raw, key)
@@ -247,7 +280,11 @@ def explain_action(
     news_now: float,
     news_prev: float,
     corr_hint: float,
+    *,
+    current: float = 0.0,
+    target_shares: float = 0.0,
 ) -> str:
+    """Say what the policy wants and what the fill does to the book — not a fake headline."""
     name = TICKER_NAMES.get(ticker, ticker)
     if abs(action) < 0.05 and qty == 0:
         verb = "Hold"
@@ -259,24 +296,41 @@ def explain_action(
         verb = f"Target {action:+.2f} {name}"
 
     reasons: list[str] = []
+    tgt = float(action)
+    if tgt >= 0.85:
+        reasons.append(f"policy tgt {tgt:+.2f} (full long)")
+    elif tgt <= -0.85:
+        reasons.append(f"policy tgt {tgt:+.2f} (full short)")
+    elif abs(tgt) < 0.05:
+        reasons.append(f"policy tgt {tgt:+.2f} (flat)")
+    elif tgt > 0:
+        reasons.append(f"policy tgt {tgt:+.2f} (long)")
+    else:
+        reasons.append(f"policy tgt {tgt:+.2f} (short)")
+
+    after = float(current) + float(qty)
+    if qty != 0:
+        reasons.append(f"book {current:.0f}→{after:.0f}")
+        if float(target_shares) < -0.5 and after > 0.5:
+            reasons.append("reduce-only (paper cannot short)")
+
     if corr_hint <= -0.4:
-        reasons.append("High negative correlation detected")
+        reasons.append("HK×US corr deeply negative")
     elif corr_hint >= 0.6:
-        reasons.append("High positive correlation (pairs moving together)")
+        reasons.append("HK×US corr high (names moving together)")
     delta = news_now - news_prev
     if delta <= -0.25:
-        reasons.append("News Sentiment dropped sharply")
+        reasons.append(f"news {news_now:+.2f}, dropped {delta:.2f}")
     elif delta >= 0.25:
-        reasons.append("News Sentiment jumped")
+        reasons.append(f"news {news_now:+.2f}, jumped {delta:+.2f}")
     elif news_now <= -0.4:
-        reasons.append("News Sentiment is deeply negative")
+        reasons.append(f"news {news_now:+.2f} (deeply negative)")
     elif news_now >= 0.4:
-        reasons.append("News Sentiment is strongly positive")
-    if abs(action) < 0.05:
-        reasons.append("Policy near zero — stay flat")
-    if not reasons:
-        reasons.append("Policy network output (no strong news/corr overlay)")
-    return f"Action: {verb}. Reason: {' + '.join(reasons)}."
+        reasons.append(f"news {news_now:+.2f} (strongly positive)")
+    else:
+        reasons.append(f"news {news_now:+.2f} (Δ{delta:+.2f}, no jump)")
+
+    return f"Action: {verb}. {'; '.join(reasons)}."
 
 
 # ---------------------------------------------------------------------------
@@ -408,14 +462,18 @@ class FutuPaperBroker:
         if qty == 0:
             return False, ""
         side_name = "BUY" if is_buy else "SELL"
+        px = round_to_tick(ticker, float(price))
+        if px != float(price):
+            logger.info("Rounded %s limit %s → %s (OpenD tick)", ticker, price, px)
         if self.dry_run or self._trade_ctx(ticker) is None:
-            logger.info("[DRY-RUN] place_order %s %s qty=%s price=%s", side_name, ticker, qty, price)
+            logger.info("[DRY-RUN] place_order %s %s qty=%s price=%s", side_name, ticker, qty, px)
             return True, "dry-run"
         from futu import RET_OK, TrdEnv, TrdSide
 
         futu_limiter.acquire()
-        ret, data = self._trade_ctx(ticker).place_order(
-            price=float(price),
+        ctx = self._trade_ctx(ticker)
+        ret, data = ctx.place_order(
+            price=px,
             qty=int(qty),
             code=ticker,
             trd_side=TrdSide.BUY if is_buy else TrdSide.SELL,
@@ -423,10 +481,107 @@ class FutuPaperBroker:
         )
         if ret == RET_OK:
             order_id = data["order_id"].iloc[0] if "order_id" in data.columns else data
-            logger.info("SIMULATE order ok %s %s qty=%s price=%s order_id=%s", side_name, ticker, qty, price, order_id)
+            logger.info("SIMULATE order ok %s %s qty=%s price=%s order_id=%s", side_name, ticker, qty, px, order_id)
             return True, str(order_id)
         logger.error("place_order failed %s %s: %s", side_name, ticker, data)
         return False, ""
+
+    def list_orders(self) -> list[dict[str, Any]] | None:
+        """SIMULATE orders from both HK and US OpenD contexts (working + recent).
+
+        Returns None when every OpenD query failed so callers can keep the last pending list.
+        """
+        from src.order_lifecycle import parse_order_row
+
+        if self.dry_run:
+            return []
+        from futu import RET_OK, TrdEnv
+
+        out: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        queried = 0
+        failed = 0
+        for ctx in (self._trd_hk, self._trd_us):
+            if ctx is None:
+                continue
+            queried += 1
+            try:
+                futu_limiter.acquire()
+                ret, data = ctx.order_list_query(trd_env=TrdEnv.SIMULATE, refresh_cache=True)
+            except TypeError:
+                futu_limiter.acquire()
+                ret, data = ctx.order_list_query(trd_env=TrdEnv.SIMULATE)
+            if ret != RET_OK:
+                logger.warning("order_list_query failed: %s", data)
+                failed += 1
+                continue
+            if data is None or len(data) == 0:
+                continue
+            for _, row in data.iterrows():
+                parsed = parse_order_row(row)
+                if parsed is None or parsed["order_id"] in seen:
+                    continue
+                seen.add(parsed["order_id"])
+                out.append(parsed)
+        if queried > 0 and failed == queried:
+            return None
+        return out
+
+    def cancel_order(self, ticker: str, order_id: str) -> bool:
+        if not order_id or self.dry_run or self._trade_ctx(ticker) is None:
+            logger.info("[DRY-RUN] cancel_order %s %s", ticker, order_id)
+            return bool(self.dry_run)
+        from futu import RET_OK, ModifyOrderOp, TrdEnv
+
+        futu_limiter.acquire()
+        ret, data = self._trade_ctx(ticker).modify_order(
+            ModifyOrderOp.CANCEL,
+            str(order_id),
+            0,
+            0,
+            trd_env=TrdEnv.SIMULATE,
+        )
+        if ret == RET_OK:
+            logger.info("Cancelled SIMULATE order %s %s", ticker, order_id)
+            return True
+        logger.warning("cancel_order failed %s %s: %s", ticker, order_id, data)
+        return False
+
+
+def _sync_pending(state: BotState, broker: FutuPaperBroker) -> None:
+    """Ask OpenD which limits are still working so the blotter can say PENDING."""
+    if broker.dry_run:
+        return
+    from src.order_lifecycle import working_pending_rows
+
+    try:
+        live = broker.list_orders()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("OpenD order list failed (%s). Pending blotter unchanged.", exc)
+        return
+    if live is None:
+        logger.warning("OpenD order list failed on every market. Pending blotter unchanged.")
+        return
+    from_open = working_pending_rows(live)
+    have = {str(row.get("order_id") or "") for row in from_open if row.get("order_id")}
+    live_ids = {str(row.get("order_id") or "") for row in live if row.get("order_id")}
+    extras = [
+        row
+        for row in (state.pending_orders or [])
+        if str(row.get("order_id") or "")
+        and str(row.get("order_id") or "") not in have
+        and str(row.get("order_id") or "") not in live_ids
+    ]
+    state.pending_orders = from_open + extras
+    if state.pending_orders:
+        logger.info(
+            "OpenD pending: %s",
+            ", ".join(
+                f"{p.get('side')} {int(float(p.get('qty') or 0))} {p.get('ticker')} "
+                f"@{float(p.get('price') or 0):.2f}"
+                for p in state.pending_orders
+            ),
+        )
 
 
 def round_to_lot(ticker: str, shares: float) -> int:
@@ -533,11 +688,25 @@ def _hk_now(now: datetime | None = None) -> datetime:
     return now.astimezone(HK_TZ)
 
 
-def _maybe_push_dashboard(state: BotState, news: NewsPoller, enabled: bool, kind: str = "live") -> None:
+def _maybe_push_dashboard(
+    state: BotState,
+    news: NewsPoller,
+    enabled: bool,
+    kind: str = "live",
+    prices: dict[str, float] | None = None,
+) -> None:
     if not enabled:
         return
+    headlines = news.headlines_by_ticker()
     try:
-        push_live_snapshot(state, headlines=news.headlines_by_ticker(), kind=kind)
+        try:
+            push_live_snapshot(state, headlines=headlines, kind=kind, prices=prices)
+        except TypeError:
+            # Older dashboard_push.py on the VM has no `kind=` / `prices=` yet.
+            try:
+                push_live_snapshot(state, headlines=headlines, kind=kind)
+            except TypeError:
+                push_live_snapshot(state, headlines=headlines)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Dashboard push skipped (%s). Trading continues.", exc)
 
@@ -590,19 +759,22 @@ def catch_up_env(
             persist_enhanced_panel(panel)
 
     env.reset()
-    caught_dt = env.seek_to_datetime(now_hk, completed_bars=True)
+    caught_dt = env.seek_to_datetime(panel_seek_now(now), completed_bars=True)
     env.restore_portfolio(state.cash, state.holdings)
     env.set_news_scores(state.news_scores)
 
     live_px = broker.snapshot_prices()
     if any(float(v or 0.0) > 0 for v in live_px.values()):
-        state.equity = state.cash + sum(state.holdings[t] * float(live_px.get(t) or 0.0) for t in CORE_TICKERS)
+        state.equity = float(state.cash) + sum(
+            float(state.holdings[t]) * float(live_px.get(t) or 0.0) for t in CORE_TICKERS if str(t).startswith("HK.")
+        )
     else:
         state.equity = float(env._last_equity)
 
     state.last_bar_datetime = str(caught_dt)
     logger.info(
-        "State catch-up complete (no orders). env_before=%s env_now=%s bar=%d/%d rebuilt=%s cash=%.2f equity=%.2f",
+        "State catch-up complete (no orders). env_before=%s env_now=%s bar=%d/%d rebuilt=%s "
+        "hk_cash=%.2f equity=%.2f seek=%s clock=%s",
         before_dt,
         caught_dt,
         env._bar_index,
@@ -610,6 +782,8 @@ def catch_up_env(
         rebuilt,
         state.cash,
         state.equity,
+        panel_seek_now(now),
+        live_session_clock(now),
     )
     if persist_state:
         save_state(state)
@@ -633,6 +807,22 @@ def _handle_stop(signum, _frame) -> None:  # noqa: ANN001
     global _shutdown
     logger.info("Received signal %s — will persist state and exit.", signum)
     _shutdown = True
+
+
+def _mtm_prefix(holdings: dict[str, float], prices: dict[str, float], prefix: str) -> float:
+    return sum(
+        float(holdings.get(ticker, 0.0) or 0.0) * float(prices.get(ticker) or 0.0)
+        for ticker in CORE_TICKERS
+        if str(ticker).startswith(prefix)
+    )
+
+
+def _apply_trade_cash(state: BotState, ticker: str, delta: float, px: float) -> None:
+    flow = -float(delta) * float(px)
+    if str(ticker).startswith("US."):
+        state.us_cash = float(getattr(state, "us_cash", US_INITIAL_CASH)) + flow
+        return
+    state.cash = float(state.cash) + flow
 
 
 def run_loop(
@@ -683,9 +873,10 @@ def run_loop(
     try:
         broker.connect()
         state = reconcile_with_futu(state, broker)
+        _sync_pending(state, broker)
         if skip_catch_up:
             env.reset()
-            env.seek_to_datetime(_hk_now(), completed_bars=True)
+            env.seek_to_datetime(panel_seek_now(), completed_bars=True)
             env.restore_portfolio(state.cash, state.holdings)
             env.set_news_scores(state.news_scores)
             logger.warning("Catch-up skipped (--skip-catch-up). Env sought to now without Futu history.")
@@ -706,6 +897,7 @@ def run_loop(
                         "Both HK and US cash sessions closed. Predict-now still scores the last completed bar (no orders)."
                     )
                 else:
+                    _sync_pending(state, broker)
                     _maybe_push_dashboard(state, news, push_dashboard, kind="heartbeat")
                     wait = min(seconds_until_next_open(), 300)
                     logger.info("Both HK and US cash sessions closed. HOLD. Sleeping %ss.", wait)
@@ -714,14 +906,13 @@ def run_loop(
                     time.sleep(wait)
                     continue
 
-            # Keep the observation window on the latest completed 10-min bar.
+            # Keep the observation on the live session's completed 10-min bar
+            # (US Eastern while HK is shut — not HKT, which sticks on HK 16:00).
             if not skip_catch_up:
                 try:
-                    import pandas as pd
-
-                    last = pd.Timestamp(env._current_dt())
-                    now_naive = pd.Timestamp(_hk_now().replace(tzinfo=None))
-                    if pd.notna(last) and (now_naive - last) >= pd.Timedelta(minutes=10):
+                    last = env._current_dt()
+                    seek_now = panel_seek_now()
+                    if need_panel_refresh(last, seek_now):
                         env, state, panel = catch_up_env(
                             env,
                             state,
@@ -731,7 +922,7 @@ def run_loop(
                             persist_state=persist_state,
                         )
                     else:
-                        env.seek_to_datetime(_hk_now(), completed_bars=True)
+                        env.seek_to_datetime(seek_now, completed_bars=True)
                         env.restore_portfolio(state.cash, state.holdings)
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("In-session catch-up failed (%s). Using current env bar.", exc)
@@ -760,9 +951,11 @@ def run_loop(
             # last 6 entries are HK×US correlations; use the mean as a reason hint
             corr_hint = float(np.mean(long_term[-6:])) if len(long_term) >= 6 else 0.0
 
-            bar_id = str(env._current_dt())
+            clock = live_session_clock(now_loop)
+            clock_ticker = "US.COST" if clock == "US" else "HK.00700"
+            bar_id = session_bar_id(env._current_dt(), now_loop)
             new_bar = bar_id != state.last_order_bar
-            bar_ready = is_kline_complete(env._current_dt(), now=now_loop)
+            bar_ready = is_kline_complete(env._current_dt(), ticker=clock_ticker, now=now_loop)
             allow_orders = (
                 (not predict_now)
                 and bar_ready
@@ -788,6 +981,7 @@ def run_loop(
                 )
 
             traded = False
+            order_failed = False
             for i, ticker in enumerate(CORE_TICKERS):
                 current = float(state.holdings.get(ticker, 0.0))
                 # Closed market: KEEP the position. Gating the action to 0 would
@@ -813,10 +1007,23 @@ def run_loop(
                     state.last_action[ticker] = 0.0
                     continue
                 px = px or 1.0
-                equity = max(state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS), 1.0)
+                px = round_to_tick(ticker, px)
+                if str(ticker).startswith("US."):
+                    equity = max(float(getattr(state, "us_cash", US_INITIAL_CASH)) + _mtm_prefix(state.holdings, prices, "US."), 1.0)
+                else:
+                    equity = max(float(state.cash) + _mtm_prefix(state.holdings, prices, "HK."), 1.0)
                 target_shares = (action_i * equity) / px
                 delta = round_to_lot(ticker, target_shares - current)
-                reason = explain_action(ticker, action_i, delta, news_now.get(ticker, 0.0), news_prev.get(ticker, 0.0), corr_hint)
+                reason = explain_action(
+                    ticker,
+                    action_i,
+                    delta,
+                    news_now.get(ticker, 0.0),
+                    news_prev.get(ticker, 0.0),
+                    corr_hint,
+                    current=current,
+                    target_shares=target_shares,
+                )
                 prefix = "[predict-now] " if predict_now else ("" if allow_orders else "[preview, no order] ")
                 logger.info("%s%s", prefix, reason)
                 state.last_reason = reason
@@ -830,7 +1037,7 @@ def run_loop(
                     continue
                 if ok:
                     state.holdings[ticker] = current + delta
-                    state.cash -= delta * px
+                    _apply_trade_cash(state, ticker, delta, px)
                     traded = True
                     append_fill(
                         {
@@ -843,19 +1050,52 @@ def run_loop(
                             "order_id": order_id,
                         }
                     )
+                    name = TICKER_NAMES.get(ticker, ticker)
+                    state.pending_orders = [
+                        row
+                        for row in (state.pending_orders or [])
+                        if str(row.get("order_id") or "") != str(order_id)
+                    ]
+                    state.pending_orders.append(
+                        {
+                            "order_id": str(order_id),
+                            "ticker": ticker,
+                            "side": "BUY" if is_buy else "SELL",
+                            "qty": int(abs(delta)),
+                            "price": float(px),
+                            "kind": "working",
+                            "status": "SUBMITTED",
+                            "time": datetime.now(tz=HK_TZ).isoformat(),
+                            "reason": (
+                                f"PENDING {'BUY' if is_buy else 'SELL'} {int(abs(delta))} {name} "
+                                f"@ {px:.2f} (not a fill)"
+                            ),
+                        }
+                    )
                     send_telegram_alert(reason)
+                else:
+                    order_failed = True
 
-            if allow_orders:
+            if allow_orders and not order_failed:
                 state.last_order_bar = bar_id
                 state.last_session_ready.update(session_today)
-            state.equity = state.cash + sum(state.holdings[t] * float(prices.get(t) or 0.0) for t in CORE_TICKERS)
-            state.last_bar_datetime = str(env._current_dt())
+            state.equity = float(state.cash) + _mtm_prefix(state.holdings, prices, "HK.")
+            state.last_bar_datetime = bar_id
             env.restore_portfolio(state.cash, state.holdings)
-            if persist_state and (traded or allow_orders):
+            _sync_pending(state, broker)
+            if persist_state and (traded or allow_orders or state.pending_orders):
                 save_state(state)
             else:
-                logger.info("No fills this cycle. Equity≈%.2f cash=%.2f", state.equity, state.cash)
-            _maybe_push_dashboard(state, news, push_dashboard)
+                logger.info(
+                    "No fills this cycle. clock=%s bar=%s HK equity≈%.2f cash=%.2f | US equity≈%.2f cash=%.2f",
+                    clock,
+                    bar_id,
+                    state.equity,
+                    state.cash,
+                    float(getattr(state, "us_cash", US_INITIAL_CASH)) + _mtm_prefix(state.holdings, prices, "US."),
+                    getattr(state, "us_cash", US_INITIAL_CASH),
+                )
+            _maybe_push_dashboard(state, news, push_dashboard, prices=prices)
 
             if predict_now:
                 logger.info("============================================================")

@@ -174,16 +174,56 @@ function buildSnapshot(): Snapshot {
   };
 }
 
+function makeTestEquity(timeZone: string, startHour: number, endHour: number, drift: number): { t: string; equity: number }[] {
+  const points: { t: string; equity: number }[] = [];
+  let equity = 1_000_000;
+  for (let i = 5 * 24 * 6; i >= 0; i -= 1) {
+    const t = new Date(Date.now() - i * 10 * 60_000);
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      hour: "numeric",
+      hourCycle: "h23",
+    }).formatToParts(t);
+    const weekday = parts.find((p) => p.type === "weekday")?.value;
+    const hour = Number(parts.find((p) => p.type === "hour")?.value);
+    if (weekday === "Sat" || weekday === "Sun" || !Number.isFinite(hour)) {
+      continue;
+    }
+    if (hour < startHour || hour >= endHour) {
+      continue;
+    }
+    equity += Math.sin(i / 7) * 180 * drift + (i % 11) * 8 - 40;
+    points.push({ t: t.toISOString(), equity: Math.round(equity * 100) / 100 });
+  }
+  return points;
+}
+
 export function makeTestSnapshot(): SnapshotResponse {
   const latest = buildSnapshot();
-  const equitySeries = Array.from({ length: 24 }, (_, i) => {
-    const step = 23 - i;
-    const wobble = Math.sin(i / 3) * 1800 + i * 420;
-    return { t: ago(step * 8), equity: 998_200 + wobble };
-  });
+  const hkEquitySeries = makeTestEquity("Asia/Hong_Kong", 9, 16, 1);
+  const usEquitySeries = makeTestEquity("America/New_York", 9, 16, 0.7);
   return {
     latest,
-    equitySeries,
+    equitySeries: hkEquitySeries,
+    hkEquitySeries,
+    usEquitySeries,
+    equityMeta: {
+      range: "today",
+      day: new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Hong_Kong",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date()),
+      rawCount: hkEquitySeries.length + usEquitySeries.length,
+      shownCount: hkEquitySeries.length + usEquitySeries.length,
+      bucketMinutes: 10,
+      hkRawCount: hkEquitySeries.length,
+      usRawCount: usEquitySeries.length,
+      hkShownCount: hkEquitySeries.length,
+      usShownCount: usEquitySeries.length,
+    },
     stale: false,
     staleAfterSeconds: 180,
   };

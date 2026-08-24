@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { EquityChart } from "@/components/EquityChart";
+import { pendingIntent, splitBooks } from "@/lib/bookSplit";
+import { filterPoints, hkYmd, metaFor, rangeBounds, shapeBookSeries } from "@/lib/equityRange";
+import { anyCashSessionOpen } from "@/lib/marketHours";
 import { makeTestSnapshot } from "@/lib/testSnapshot";
-import { CORE_TICKERS, TICKER_NAMES, type Fill, type Headline, type SnapshotResponse } from "@/lib/types";
+import { CORE_TICKERS, TICKER_NAMES, type Fill, type Headline, type RangeMode, type SnapshotResponse } from "@/lib/types";
 
 const MOBILE_MQ = "(max-width: 800px)";
 const HANDLE_PX = 16;
 const MIN_PANE = 200;
+const HK_PATH = "#8fbf9f";
+const US_PATH = "#8fa4bf";
 
 function money(n: number): string {
   return new Intl.NumberFormat("en-HK", {
@@ -107,21 +113,45 @@ function hkClock(value: string): string {
   }).format(new Date(ms));
 }
 
-function useCompact(): boolean {
-  const [compact, setCompact] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(MOBILE_MQ);
-    const sync = () => setCompact(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return compact;
+function equityNote(
+  meta: { rawCount?: number; shownCount?: number } | undefined,
+  shown: number,
+): string {
+  const raw = meta?.rawCount ?? shown;
+  const drawn = meta?.shownCount ?? shown;
+  if (!raw && !drawn) {
+    return "0 Snapshots";
+  }
+  return `${drawn}/${raw} Snapshots`;
 }
 
-function Sparkline({ points }: { points: { t: string; equity: number }[] }) {
+function ExpandGlyph({ open }: { open: boolean }) {
+  return (
+    <svg className="equity-expand" viewBox="0 0 16 16" aria-hidden>
+      {open ? (
+        <path
+          d="M5 2v3H2M11 2v3h3M11 14v-3h3M5 14v-3H2"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="square"
+        />
+      ) : (
+        <path
+          d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="square"
+        />
+      )}
+    </svg>
+  );
+}
+
+function MiniSpark({ points, stroke = "#8fbf9f" }: { points: { t: string; equity: number }[]; stroke?: string }) {
   if (points.length < 2) {
-    return <div className="spark-empty">NOTHING TO SHOW</div>;
+    return <div className="spark-empty">—</div>;
   }
   const xs = points.map((p) => p.equity);
   const min = Math.min(...xs);
@@ -136,9 +166,21 @@ function Sparkline({ points }: { points: { t: string; equity: number }[] }) {
     .join(" ");
   return (
     <svg className="spark" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden>
-      <path d={d} fill="none" stroke="#8fbf9f" strokeWidth="1.4" />
+      <path d={d} fill="none" stroke={stroke} strokeWidth="1.4" />
     </svg>
   );
+}
+
+function useCompact(): boolean {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MQ);
+    const sync = () => setCompact(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return compact;
 }
 
 function groupFills(fills: Fill[]): { day: string; rows: Fill[] }[] {
@@ -297,50 +339,208 @@ function HeadlineGroup({
   );
 }
 
+function BookSwitch({
+  active,
+  hkOpen,
+  usOpen,
+  onChange,
+}: {
+  active: "HK" | "US";
+  hkOpen: boolean;
+  usOpen: boolean;
+  onChange: (market: "HK" | "US") => void;
+}) {
+  return (
+    <div className="book-switch" role="group" aria-label="Watch HK or US book">
+      <button
+        type="button"
+        className={`book-switch-opt${active === "HK" ? " is-on" : ""}${hkOpen ? " is-live" : ""}`}
+        aria-pressed={active === "HK"}
+        onClick={() => onChange("HK")}
+        title="Hong Kong SIMULATE book (HKD)"
+      >
+        HK
+      </button>
+      <span className="book-switch-rule" aria-hidden>
+        |
+      </span>
+      <button
+        type="button"
+        className={`book-switch-opt${active === "US" ? " is-on" : ""}${usOpen ? " is-live" : ""}`}
+        aria-pressed={active === "US"}
+        onClick={() => onChange("US")}
+        title="US SIMULATE book (USD)"
+      >
+        US
+      </button>
+    </div>
+  );
+}
+
 export function Dashboard({ initial }: { initial: SnapshotResponse }) {
   const [data, setData] = useState(initial);
   const [demo, setDemo] = useState(false);
   const [share, setShare] = useState(0.5);
+  const [range, setRange] = useState<RangeMode>(initial.equityMeta?.range === "week" ? "week" : "today");
+  const [day, setDay] = useState(initial.equityMeta?.day || hkYmd());
+  const [demoSeries, setDemoSeries] = useState({
+    hk: initial.hkEquitySeries || [],
+    us: initial.usEquitySeries || [],
+  });
+  const [equityOpen, setEquityOpen] = useState(true);
+  const [now, setNow] = useState(() => new Date());
+  const [watch, setWatch] = useState<"HK" | "US" | null>(null);
   const splitRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef(false);
   const compact = useCompact();
+
+  useLayoutEffect(() => {
+    if (window.matchMedia(MOBILE_MQ).matches) {
+      setEquityOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 15_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (demo) {
       return;
     }
+    let timer = 0;
+    let cancelled = false;
     const tick = async () => {
       try {
         const res = await fetch("/api/snapshot", { cache: "no-store" });
         if (res.ok) {
-          setData((await res.json()) as SnapshotResponse);
+          const next = (await res.json()) as SnapshotResponse;
+          setData((prev) => ({
+            ...prev,
+            latest: next.latest,
+            stale: next.stale,
+            error: next.error,
+          }));
         }
       } catch {
         // keep last good frame
       }
     };
-    const id = window.setInterval(tick, 20_000);
-    return () => window.clearInterval(id);
+    const schedule = () => {
+      const ms = anyCashSessionOpen(new Date()) ? 5_000 : 20_000;
+      timer = window.setTimeout(async () => {
+        if (cancelled) {
+          return;
+        }
+        await tick();
+        if (!cancelled) {
+          schedule();
+        }
+      }, ms);
+    };
+    void tick();
+    schedule();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [demo]);
 
+  useEffect(() => {
+    if (demo) {
+      const hkRaw = filterPoints(demoSeries.hk, range, day);
+      const usRaw = filterPoints(demoSeries.us, range, day);
+      const shaped = shapeBookSeries(hkRaw, usRaw, range);
+      setData((prev) => ({
+        ...prev,
+        hkEquitySeries: shaped.hk,
+        usEquitySeries: shaped.us,
+        equitySeries: shaped.hk,
+        equityMeta: {
+          ...metaFor(range, day, hkRaw.length + usRaw.length, shaped.hk.length + shaped.us.length, shaped.bucketMinutes),
+          hkRawCount: hkRaw.length,
+          usRawCount: usRaw.length,
+          hkShownCount: shaped.hk.length,
+          usShownCount: shaped.us.length,
+        },
+      }));
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const params = new URLSearchParams({ range, day });
+        const res = await fetch(`/api/equity?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) {
+          return;
+        }
+        const next = (await res.json()) as Pick<
+          SnapshotResponse,
+          "hkEquitySeries" | "usEquitySeries" | "equitySeries" | "equityMeta" | "error"
+        >;
+        if (cancelled) {
+          return;
+        }
+        setData((prev) => ({
+          ...prev,
+          hkEquitySeries: next.hkEquitySeries || [],
+          usEquitySeries: next.usEquitySeries || [],
+          equitySeries: next.hkEquitySeries || next.equitySeries || [],
+          equityMeta: next.equityMeta,
+          error: next.error || prev.error,
+        }));
+      } catch {
+        // keep last series
+      }
+    };
+    void load();
+    const { end } = rangeBounds(range, day);
+    const live = Date.now() < end.getTime();
+    const id = live ? window.setInterval(load, range === "today" ? 20_000 : 60_000) : 0;
+    return () => {
+      cancelled = true;
+      if (id) {
+        window.clearInterval(id);
+      }
+    };
+  }, [demo, demoSeries, range, day]);
+
+  // TEST overlay is unwired in the header (HK/US session flags replaced the TEST button).
+  // Keep toggleDemo / makeTestSnapshot / demo poll-skip so we can hang the button back later.
   async function toggleDemo() {
     if (demo) {
       setDemo(false);
       try {
         const res = await fetch("/api/snapshot", { cache: "no-store" });
         if (res.ok) {
-          setData((await res.json()) as SnapshotResponse);
+          const next = (await res.json()) as SnapshotResponse;
+          setData((prev) => ({
+            ...prev,
+            latest: next.latest,
+            stale: next.stale,
+            error: next.error,
+          }));
           return;
         }
       } catch {
         // fall through to the last server frame
       }
-      setData(initial);
+      setData((prev) => ({
+        ...initial,
+        equitySeries: prev.equitySeries,
+        hkEquitySeries: prev.hkEquitySeries,
+        usEquitySeries: prev.usEquitySeries,
+        equityMeta: prev.equityMeta,
+      }));
       return;
     }
     setDemo(true);
-    setData(makeTestSnapshot());
+    const fake = makeTestSnapshot();
+    setDemoSeries({ hk: fake.hkEquitySeries, us: fake.usEquitySeries });
+    setData(fake);
   }
+  void toggleDemo;
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
@@ -371,11 +571,21 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
 
   const snap = data.latest;
   const stale = data.stale || !snap;
-  const pnl = snap?.pnl ?? 0;
-  const startCash = snap?.initial_cash ?? 0;
+  const books = useMemo(() => splitBooks(snap, now), [snap, now]);
+  const active = watch ?? (books.us.open ? "US" : "HK");
+  const activeBook = active === "US" ? books.us : books.hk;
+  const pnl = activeBook.pnl;
+  const startCash = 1_000_000;
   const pnlPct = startCash ? (pnl / startCash) * 100 : 0;
-  const fills = snap?.fills || [];
+  const fills = useMemo(
+    () => books.fills.filter((fill) => (active === "US" ? fill.ticker.startsWith("US.") : fill.ticker.startsWith("HK."))),
+    [books.fills, active],
+  );
   const fillGroups = useMemo(() => groupFills(fills), [fills]);
+  const hkPath = data.hkEquitySeries || [];
+  const usPath = data.usEquitySeries || [];
+  const pathPoints = active === "US" ? usPath : hkPath;
+  const pathStroke = active === "US" ? US_PATH : HK_PATH;
 
   return (
     <div className="app">
@@ -384,14 +594,12 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
           <span className="brand-mark">AIRAIRE</span>
           <span className="brand-title">Paper Book</span>
         </div>
-        <button
-          type="button"
-          className={demo ? "test-btn is-on" : "test-btn"}
-          onClick={toggleDemo}
-          aria-pressed={demo}
-        >
-          TEST
-        </button>
+        <BookSwitch
+          active={active}
+          hkOpen={books.hk.open}
+          usOpen={books.us.open}
+          onChange={setWatch}
+        />
       </header>
 
       <div className={`status-strip ${stale ? "stale" : "live"}`}>
@@ -403,10 +611,12 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
         </div>
         <div className="status-meta">
           <div className="status-meta-row">
-            <span>Last snapshot</span> <strong>{formatHkStamp(snap?.updated_at)}</strong>
+            <span className="status-label-full">Last Snapshot</span>
+            <span className="status-label-short">Last Snap</span>{" "}
+            <strong>{formatHkStamp(snap?.updated_at)}</strong>
           </div>
           <div className="status-meta-row">
-            <span>Last bar</span> <strong>{snap?.last_bar_datetime || "—"}</strong>
+            <span>Last Bar</span> <strong>{snap?.last_bar_datetime || "—"}</strong>
           </div>
         </div>
       </div>
@@ -415,33 +625,93 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
 
       <div className="page-body">
         <section className="kpis">
-          <div className="card">
+          <div className="card kpi-card kpi-equity">
             <div className="kpi-label">Equity</div>
-            <div className="kpi-value">{snap ? money(snap.equity) : "—"}</div>
-            <div className="kpi-note">HKD</div>
+            <div className="kpi-value">{snap ? money(activeBook.equity) : "—"}</div>
+            <div className="kpi-note">{activeBook.currency}</div>
           </div>
-          <div className="card">
+          <div className="card kpi-card kpi-cash">
             <div className="kpi-label">Cash</div>
-            <div className="kpi-value">{snap ? money(snap.cash) : "—"}</div>
-            <div className="kpi-note">HKD</div>
+            <div className="kpi-value">{snap ? money(activeBook.cash) : "—"}</div>
+            <div className="kpi-note">{activeBook.currency}</div>
           </div>
-          <div className="card">
+          <div
+            className={`card kpi-card kpi-pnl${snap ? (pnl > 0.5 ? " is-pos" : pnl < -0.5 ? " is-neg" : " is-flat") : " is-flat"}`}
+          >
             <div className="kpi-label">P&amp;L vs Start</div>
             <div className={`kpi-value ${snap ? (pnl >= 0 ? "pos" : "neg") : ""}`}>
               {snap ? `${pnl >= 0 ? "+" : ""}${money(pnl)}` : "—"}
             </div>
             <div className="kpi-note">
-              {snap && startCash ? `${signed(pnlPct, 2)}% since start` : "—"}
+              {snap && startCash ? `${signed(pnlPct, 2)}% · ${activeBook.currency}` : "—"}
             </div>
           </div>
-          <div className="card">
-            <div className="kpi-label">Equity Path</div>
-            <Sparkline points={data.equitySeries} />
-            <div className="kpi-note">
-              {data.equitySeries.length
-                ? `${data.equitySeries.length} session snapshot${data.equitySeries.length === 1 ? "" : "s"}`
-                : "Waiting for a session snapshot"}
+          <button
+            type="button"
+            className={equityOpen ? "equity-mini is-on" : "equity-mini"}
+            onClick={() => setEquityOpen((open) => !open)}
+            aria-expanded={equityOpen}
+            aria-label={equityOpen ? "Hide path" : "Show path"}
+          >
+            <div className="kpi-label">Path</div>
+            <div className="equity-mini-spark">
+              <MiniSpark points={pathPoints} stroke={pathStroke} />
             </div>
+            <ExpandGlyph open={equityOpen} />
+          </button>
+          <div className={`card equity-card${equityOpen ? "" : " is-stowed"}`}>
+            <div className="equity-head">
+              <div>
+                <div className="kpi-label">Path</div>
+                <div className="kpi-note">
+                  {equityNote(
+                    data.equityMeta
+                      ? {
+                          rawCount: active === "US" ? data.equityMeta.usRawCount : data.equityMeta.hkRawCount,
+                          shownCount: active === "US" ? data.equityMeta.usShownCount : data.equityMeta.hkShownCount,
+                        }
+                      : undefined,
+                    pathPoints.length,
+                  )}
+                </div>
+              </div>
+              <div className="equity-controls">
+                <button
+                  type="button"
+                  className={range === "today" ? "range-btn is-on" : "range-btn"}
+                  onClick={() => setRange("today")}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className={range === "week" ? "range-btn is-on" : "range-btn"}
+                  onClick={() => setRange("week")}
+                >
+                  Week
+                </button>
+                <label className="range-day">
+                  <span>Day</span>
+                  <input
+                    type="date"
+                    value={day}
+                    max={hkYmd()}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      if (!next) {
+                        return;
+                      }
+                      setDay(next);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+            <EquityChart
+              points={pathPoints}
+              currency={activeBook.currency}
+              stroke={pathStroke}
+            />
           </div>
         </section>
 
@@ -456,21 +726,23 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
                 <tr>
                   <th>Name</th>
                   <th className="num">Qty</th>
-                  <th className="num">Act</th>
+                  <th className="num" title="Last PPO output. −1 = want full short, +1 = want full long. Qty is the book.">
+                    Tgt
+                  </th>
                   <th className="num">News</th>
                 </tr>
               </thead>
               <tbody>
-                {CORE_TICKERS.map((ticker) => {
+                {activeBook.names.map((ticker) => {
                   const action = snap?.last_action?.[ticker] ?? 0;
                   const news = snap?.news_scores?.[ticker] ?? 0;
                   return (
-                    <tr key={ticker}>
+                    <tr key={ticker} className="is-watch">
                       <td>
                         <div className="book-name">{TICKER_NAMES[ticker] || ticker}</div>
                         <div className="book-code">{ticker}</div>
                       </td>
-                      <td className="num">{qty(snap?.holdings?.[ticker] ?? 0)}</td>
+                      <td className="num">{qty(books.holdings[ticker] ?? snap?.holdings?.[ticker] ?? 0)}</td>
                       <td className={`num ${scoreClass(action)}`}>{signed(action)}</td>
                       <td className={`num ${scoreClass(news)}`}>{signed(news)}</td>
                     </tr>
@@ -508,12 +780,31 @@ export function Dashboard({ initial }: { initial: SnapshotResponse }) {
                     <div className="fill-day">{group.day}</div>
                     {group.rows.map((fill, i) => {
                       const side = (fill.side || "").toUpperCase();
-                      const sideClass = side === "SELL" ? "sell" : side === "BUY" ? "buy" : "";
+                      const cancelled = side === "CANCEL" || side === "CANCELLED";
+                      const pending = side === "PENDING";
+                      const intent = pending ? (fill.working_side || pendingIntent(fill) || "").toUpperCase() : "";
+                      const sideClass = pending
+                        ? "pending"
+                        : cancelled
+                          ? "cancel"
+                          : side === "SELL"
+                            ? "sell"
+                            : side === "BUY"
+                              ? "buy"
+                              : "";
                       return (
-                        <div key={`${fill.order_id}-${fill.time}-${i}`} className="fill-row">
+                        <div key={`${fill.order_id}-${fill.time}-${i}`} className={`fill-row${cancelled ? " is-cancelled" : ""}${pending ? " is-pending" : ""}`}>
                           <div className="fill-main">
                             <span className="fill-time">{hkClock(fill.time)}</span>
-                            <span className={`fill-side ${sideClass}`}>{side || "—"}</span>
+                            <span className={`fill-side ${sideClass}`}>
+                              {pending
+                                ? intent === "BUY" || intent === "SELL"
+                                  ? `PENDING ${intent}`
+                                  : "PENDING"
+                                : cancelled
+                                  ? "CANCEL"
+                                  : side || "—"}
+                            </span>
                             <span className="fill-name">
                               {qty(fill.qty)} {TICKER_NAMES[fill.ticker] || fill.ticker}
                             </span>

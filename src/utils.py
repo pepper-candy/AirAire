@@ -136,6 +136,52 @@ LOT_SIZES = {
     "US.KO": 1,
 }
 
+
+def price_tick(ticker: str, price: float) -> float:
+    """Minimum price increment for a Futu SIMULATE limit.
+
+    US: $0.0001 below $1, else $0.01. HK: HKEX spread bands.
+    """
+    px = abs(float(price))
+    if str(ticker).startswith("US."):
+        return 0.0001 if px < 1 else 0.01
+    bands = (
+        (0.25, 0.001),
+        (0.50, 0.005),
+        (10.0, 0.01),
+        (20.0, 0.02),
+        (100.0, 0.05),
+        (200.0, 0.10),
+        (500.0, 0.20),
+        (1000.0, 0.50),
+        (2000.0, 1.0),
+        (5000.0, 2.0),
+    )
+    for cap, tick in bands:
+        if px < cap:
+            return tick
+    return 5.0
+
+
+def round_to_tick(ticker: str, price: float) -> float:
+    """Snap a quote to a legal OpenD limit so KO ($0.01) is not rejected."""
+    raw = float(price)
+    if raw <= 0:
+        return raw
+    tick = price_tick(ticker, raw)
+    snapped = round(raw / tick) * tick
+    if str(ticker).startswith("US."):
+        decimals = 4 if abs(snapped) < 1 else 2
+    elif tick >= 1:
+        decimals = 0
+    elif tick >= 0.1:
+        decimals = 1
+    elif tick >= 0.01:
+        decimals = 2
+    else:
+        decimals = 3
+    return round(snapped, decimals)
+
 HK_TZ = ZoneInfo("Asia/Hong_Kong")
 US_TZ = ZoneInfo("America/New_York")
 UTC = ZoneInfo("UTC")
@@ -152,6 +198,8 @@ CNY_DATES = (
 FUTU_HOST = os.getenv("FUTU_HOST", "127.0.0.1")
 FUTU_PORT = int(os.getenv("FUTU_PORT", "11111"))
 INITIAL_CASH = float(os.getenv("INITIAL_CASH", "1000000"))
+# Futu US SIMULATE is a separate ~USD 1M book. Do not mix into HK HKD cash.
+US_INITIAL_CASH = float(os.getenv("US_INITIAL_CASH", "1000000"))
 
 # Futu OpenD quote/trade: 60 requests / 30 seconds
 FUTU_MAX_REQUESTS = 60
@@ -278,6 +326,57 @@ def market_naive_now(ticker: str, now: datetime | None = None) -> datetime:
     if now.tzinfo is None:
         now = now.replace(tzinfo=HK_TZ)
     return now.astimezone(tz).replace(tzinfo=None)
+
+
+def live_session_clock(now: datetime | None = None) -> str:
+    """Which naive panel clock is live: US Eastern while US cash is open and HK is shut."""
+    if is_us_market_open(now) and not is_hk_market_open(now):
+        return "US"
+    return "HK"
+
+
+def panel_seek_now(now: datetime | None = None) -> datetime:
+    """Naive timestamp for ``TradingEnv.seek_to_datetime``.
+
+    Futu / Bloomberg klines are naive *local-market* clocks (HK HKT, US ET),
+    not one HKT timeline. Seeking with HKT 00:11 lands on HK 16:00 and never
+    advances through the US 10-min bars (09:30–15:50 ET are all < 16:00 naive).
+    """
+    if live_session_clock(now) == "US":
+        return market_naive_now("US.COST", now)
+    return market_naive_now("HK.00700", now)
+
+
+def session_bar_id(bar_dt: object, now: datetime | None = None) -> str:
+    """Prefix the env bar with HK/US so US 16:00 is not the same key as HK 16:00."""
+    return f"{live_session_clock(now)}:{bar_dt}"
+
+
+def need_panel_refresh(last_dt: object, seek_now: datetime) -> bool:
+    """True when 10 minutes passed on the session clock, or the env is on the other market's bar."""
+
+    def _naive(value: object) -> datetime | None:
+        if value is None:
+            return None
+        ts = value
+        to_pydt = getattr(value, "to_pydatetime", None)
+        if callable(to_pydt):
+            ts = to_pydt()
+        if not isinstance(ts, datetime):
+            try:
+                ts = datetime.fromisoformat(str(ts).replace(" ", "T")[:19])
+            except ValueError:
+                return None
+        if ts.tzinfo is not None:
+            ts = ts.replace(tzinfo=None)
+        return ts
+
+    last = _naive(last_dt)
+    now_ts = _naive(seek_now)
+    if last is None or now_ts is None:
+        return True
+    delta = now_ts - last
+    return delta >= timedelta(minutes=10) or delta < timedelta(0)
 
 
 def is_kline_complete(

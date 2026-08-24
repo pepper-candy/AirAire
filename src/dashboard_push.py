@@ -27,6 +27,7 @@ from src.utils import (
     HK_TZ,
     INITIAL_CASH,
     TRADES_JSONL,
+    US_INITIAL_CASH,
     setup_logging,
 )
 
@@ -34,7 +35,7 @@ load_dotenv()
 logger = setup_logging("airaire.dashboard_push")
 
 SNAPSHOTS_TABLE = os.getenv("DASHBOARD_SNAPSHOTS_TABLE", "bot_snapshots").strip() or "bot_snapshots"
-FILL_HISTORY = 50
+FILL_HISTORY = 500
 STALE_AFTER_SECONDS = 180
 _skip_logged = False
 
@@ -121,12 +122,22 @@ def build_snapshot(
     fills: list[dict[str, Any]] | None = None,
     initial_cash: float = INITIAL_CASH,
     updated_at: str | None = None,
+    prices: dict[str, float] | None = None,
+    us_cash: float | None = None,
+    us_equity: float | None = None,
+    pending_order_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     book_holdings = {t: float(holdings.get(t, 0.0)) for t in CORE_TICKERS}
     book_action = {t: float(last_action.get(t, 0.0)) for t in CORE_TICKERS}
     book_news = {t: float(news_scores.get(t, 0.0)) for t in CORE_TICKERS}
     book_headlines = {t: list((headlines or {}).get(t, [])) for t in CORE_TICKERS}
-    return {
+    book_prices = {
+        t: float((prices or {}).get(t, 0.0) or 0.0)
+        for t in CORE_TICKERS
+        if float((prices or {}).get(t, 0.0) or 0.0) > 0
+    }
+    usd_cash = float(US_INITIAL_CASH if us_cash is None else us_cash)
+    payload = {
         "kind": kind,
         "updated_at": updated_at or hk_now_iso(),
         "cash": float(cash),
@@ -141,10 +152,32 @@ def build_snapshot(
         "fills": list(fills if fills is not None else load_recent_fills()),
         "initial_cash": float(initial_cash),
         "pnl": float(equity) - float(initial_cash),
+        "us_cash": usd_cash,
+        "us_equity": float(usd_cash if us_equity is None else us_equity),
+        "pending_order_ids": [str(x) for x in (pending_order_ids or []) if str(x)],
     }
+    if book_prices:
+        payload["prices"] = book_prices
+    return payload
 
 
-def snapshot_from_state(state: Any, headlines: dict[str, list[dict[str, Any]]] | None = None, kind: str = "live") -> dict[str, Any]:
+def snapshot_from_state(
+    state: Any,
+    headlines: dict[str, list[dict[str, Any]]] | None = None,
+    kind: str = "live",
+    prices: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    from src.order_lifecycle import overlay_pending_fills
+
+    pending = list(getattr(state, "pending_orders", None) or [])
+    fills = overlay_pending_fills(load_recent_fills(), pending, now_iso=hk_now_iso())
+    live_px = {str(k): float(v) for k, v in (prices or {}).items() if float(v or 0.0) > 0}
+    us_cash = float(getattr(state, "us_cash", US_INITIAL_CASH))
+    us_mtm = sum(
+        float((getattr(state, "holdings", {}) or {}).get(t, 0.0) or 0.0) * float(live_px.get(t) or 0.0)
+        for t in CORE_TICKERS
+        if str(t).startswith("US.")
+    )
     return build_snapshot(
         kind=kind,
         cash=float(getattr(state, "cash", INITIAL_CASH)),
@@ -155,8 +188,70 @@ def snapshot_from_state(state: Any, headlines: dict[str, list[dict[str, Any]]] |
         last_bar_datetime=str(getattr(state, "last_bar_datetime", "") or ""),
         news_scores=dict(getattr(state, "news_scores", {}) or {}),
         headlines=headlines,
-        fills=load_recent_fills(),
+        fills=fills,
+        prices=live_px or None,
+        us_cash=us_cash,
+        us_equity=us_cash + us_mtm,
+        pending_order_ids=[str(row.get("order_id") or "") for row in pending if row.get("order_id")],
     )
+
+
+def fetch_latest_payload() -> dict[str, Any] | None:
+    """GET the newest blotter row. None if unset/failed."""
+    if not configured():
+        logger.error("Set DASHBOARD_PUSH_URL and DASHBOARD_PUSH_KEY in .env first.")
+        return None
+    url = f"{_rest_base()}/{SNAPSHOTS_TABLE}?select=id,created_at,kind,payload&order=created_at.desc&limit=1"
+    try:
+        resp = requests.get(url, headers=_headers(), timeout=15)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Fetch latest snapshot failed (%s).", exc)
+        return None
+    if resp.status_code >= 400:
+        logger.error("Fetch latest HTTP %s: %s", resp.status_code, (resp.text or "")[:240])
+        return None
+    try:
+        rows = resp.json()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Fetch latest JSON failed (%s).", exc)
+        return None
+    if not rows:
+        return None
+    payload = rows[0].get("payload")
+    return payload if isinstance(payload, dict) else None
+
+
+def rewrite_trades_jsonl(order_ids: set[str]) -> None:
+    """Mark matching blotter lines CANCEL so the next trader push keeps them cancelled."""
+    if not TRADES_JSONL.exists() or not order_ids:
+        return
+    try:
+        lines = TRADES_JSONL.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        logger.warning("Could not read %s (%s).", TRADES_JSONL, exc)
+        return
+    wanted = {str(x) for x in order_ids}
+    out: list[str] = []
+    changed = 0
+    for line in lines:
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            rec = json.loads(text)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        if isinstance(rec, dict) and str(rec.get("order_id") or "") in wanted:
+            if str(rec.get("side") or "").upper() != "CANCEL":
+                rec["side"] = "CANCEL"
+                rec["reason"] = "CANCEL unfilled limit — shares restored. " + str(rec.get("reason") or "")
+                changed += 1
+        out.append(json.dumps(rec, ensure_ascii=False, default=str))
+    tmp = TRADES_JSONL.with_suffix(".jsonl.tmp")
+    tmp.write_text("\n".join(out) + ("\n" if out else ""), encoding="utf-8")
+    tmp.replace(TRADES_JSONL)
+    logger.info("Rewrote %s (%d line(s) marked CANCEL).", TRADES_JSONL.name, changed)
 
 
 def push_snapshot(payload: dict[str, Any]) -> bool:
@@ -189,8 +284,11 @@ def push_live_snapshot(
     state: Any,
     headlines: dict[str, list[dict[str, Any]]] | None = None,
     kind: str = "live",
+    prices: dict[str, float] | None = None,
 ) -> bool:
     try:
+        return push_snapshot(snapshot_from_state(state, headlines=headlines, kind=kind, prices=prices))
+    except TypeError:
         return push_snapshot(snapshot_from_state(state, headlines=headlines, kind=kind))
     except Exception as exc:  # noqa: BLE001
         logger.warning("Dashboard snapshot build failed (%s). Trading continues.", exc)
@@ -318,6 +416,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="INSERT one kind=seed row from data/raw/news (no Alpha Vantage).",
     )
     p.add_argument("--dry-run", action="store_true", help="With --seed-news: print counts, do not POST.")
+    p.add_argument(
+        "--correct-unfilled",
+        action="store_true",
+        help="Reverse unfilled CATL limit sells 8899494/8899530 in the blotter and state_v3.pkl.",
+    )
+    p.add_argument(
+        "--reconcile-futu",
+        action="store_true",
+        help="Compare state_v3.pkl / dashboard to Futu SIMULATE fills. Add --apply to write.",
+    )
+    p.add_argument(
+        "--apply",
+        action="store_true",
+        help="With --reconcile-futu: write pickle + dashboard from Futu fills.",
+    )
     return p.parse_args(argv)
 
 
@@ -327,5 +440,16 @@ if __name__ == "__main__":
         sys.exit(ping())
     if args.seed_news:
         sys.exit(seed_news(dry_run=args.dry_run))
-    logger.error("Use: python -m src.dashboard_push --ping | --seed-news [--dry-run]")
+    if args.correct_unfilled:
+        from src.correct_unfilled import run as _correct_unfilled
+
+        sys.exit(_correct_unfilled(dry_run=args.dry_run))
+    if args.reconcile_futu:
+        from src.reconcile_futu import run as _reconcile_futu
+
+        sys.exit(_reconcile_futu(apply=args.apply))
+    logger.error(
+        "Use: python -m src.dashboard_push --ping | --seed-news [--dry-run] | "
+        "--correct-unfilled | --reconcile-futu [--apply]"
+    )
     sys.exit(2)
