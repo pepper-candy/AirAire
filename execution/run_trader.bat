@@ -13,6 +13,7 @@ echo Log in in the OpenD window, then come back here.
 pause
 
 echo [3/3] Starting inference bot (Continuous Mode)...
+echo Terminal copy is also written to logs\trader_YYYYMMDD_HHMMSS.txt
 echo Press CTRL+C to stop.
 python -m src.inference --poll-seconds 60
 

@@ -700,7 +700,13 @@ def _train_impl(
     else:
         logger.info("Rolling %d sequential windows of %d session days (step = 1 day).", len(windows), window_days)
 
-    start_index, ckpt_to_load = (1, None) if test else _resolve_checkpoint(windows, resume, output_dir, init_checkpoint)
+    if test:
+        start_index = 1
+        ckpt_to_load = Path(init_checkpoint) if init_checkpoint is not None else None
+        if ckpt_to_load is not None and not ckpt_to_load.exists():
+            raise FileNotFoundError(f"--test --init-checkpoint not found: {ckpt_to_load}")
+    else:
+        start_index, ckpt_to_load = _resolve_checkpoint(windows, resume, output_dir, init_checkpoint)
     if ckpt_to_load is not None:
         logger.info("Warm-start GPU weights from %s  (first window index=%d)", ckpt_to_load, start_index)
 

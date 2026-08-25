@@ -20,7 +20,8 @@ export function listGates(): GateEntry[] {
   const rows: GateEntry[] = [
     { password: (process.env.DASHBOARD_GATE_VICTOR || "Banana").trim(), welcome: "WELCOME, VICTOR🍌" },
     { password: (process.env.DASHBOARD_GATE_DEREK || "Whale").trim(), welcome: "WELCOME, DEREK🐳" },
-    { password: (process.env.DASHBOARD_GATE_ADRIAN || "Star").trim(), welcome: "WELCOME, ADRIAN✨" },
+    { password: (process.env.DASHBOARD_GATE_ADRIAN || "Stars").trim(), welcome: "WELCOME, ADRIAN✨" },
+    { password: (process.env.DASHBOARD_GATE_LEVI || "Doggy").trim(), welcome: "WELCOME, BRIAN🐶" },
     { password: (process.env.DASHBOARD_GATE_PUBLIC || "Public").trim(), welcome: "WELCOME" },
   ].filter((row) => row.password);
 

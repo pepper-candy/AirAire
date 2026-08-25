@@ -5,10 +5,19 @@ Training still assumes instant fills. This layer is OpenD-only.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
-from src.utils import CORE_TICKERS, TICKER_NAMES
+from src.utils import CORE_TICKERS, HK_TZ, TICKER_NAMES, ticker_market
+
+# Skip COST/KO 7-vs-14 flicker. HK lot=100 already filters most noise.
+MIN_NOTIONAL_HKD = 10_000.0
+MIN_NOTIONAL_USD = 8_000.0
+MIN_WEIGHT_STEP = 0.01
+# One completed 10-min bar + slack. OpenD does not cancel leftovers for us.
+STALE_ORDER_MINUTES = 12.0
 
 WORKING = frozenset(
     {
@@ -272,3 +281,194 @@ def parse_order_row(row: Any) -> dict[str, Any] | None:
         }
     except Exception:  # noqa: BLE001
         return None
+
+
+# ---------------------------------------------------------------------------
+# Futu place_order reject taxonomy
+# ---------------------------------------------------------------------------
+# First matching rule wins. Add new OpenD strings here — never swallow them.
+_PLACE_ERROR_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "hk_short",
+        (
+            "卖空",
+            "close only",
+            "平仓",
+            "not allow short",
+            "cannot short",
+            "can't short",
+            "no short",
+            "short selling",
+            "short sell",
+            "short not",
+        ),
+    ),
+    (
+        "price_precision",
+        ("价格精度", "price precision", "tick size", "invalid price", "decimal"),
+    ),
+    (
+        "lot_qty",
+        ("手数", "lot size", "quantity", "qty invalid", "invalid qty", "not multiple"),
+    ),
+    (
+        "buying_power",
+        ("购买力", "buying power", "insufficient", "not enough cash", "max buying"),
+    ),
+    (
+        "price_deviation",
+        ("偏离", "max price", "price limit", "too far", "spread"),
+    ),
+    (
+        "session_halt",
+        ("停牌", "not tradable", "market closed", "halt", "suspend", "非交易"),
+    ),
+    (
+        "rate_limit",
+        ("too frequent", "频率", "rate limit", "throttle"),
+    ),
+    (
+        "duplicate",
+        ("重复", "processing", "duplicate", "locked"),
+    ),
+    (
+        "position",
+        ("持仓不足", "position not enough", "not enough position", "qty exceed"),
+    ),
+    (
+        "account",
+        ("trd_env", "simulate", "unlock", "account", "权限"),
+    ),
+)
+
+# Standalone "short" after the phrases above so "shortage" / "shortcut" do not match.
+_HK_SHORT_WORD = re.compile(r"(?<![a-z])short(?![a-z])", re.IGNORECASE)
+
+KNOWN_PLACE_ERROR_KINDS = frozenset(kind for kind, _ in _PLACE_ERROR_RULES) | {"unknown", "hk_short"}
+
+
+def classify_place_error(data: Any, *, ticker: str = "") -> str:
+    """Map OpenD ``place_order`` ``data`` to a stable kind for logs and compensation."""
+    text = str(data or "").strip()
+    blob = text.lower()
+    for kind, needles in _PLACE_ERROR_RULES:
+        for needle in needles:
+            if needle.lower() in blob:
+                if kind == "hk_short" and ticker and str(ticker).startswith("US."):
+                    continue
+                return kind
+    if ticker and str(ticker).startswith("HK.") and _HK_SHORT_WORD.search(text):
+        return "hk_short"
+    if not ticker and _HK_SHORT_WORD.search(text):
+        return "hk_short"
+    return "unknown"
+
+
+def min_notional_for(ticker: str) -> float:
+    try:
+        return MIN_NOTIONAL_USD if ticker_market(ticker) == "US" else MIN_NOTIONAL_HKD
+    except ValueError:
+        return MIN_NOTIONAL_HKD
+
+
+def skip_tiny_rebalance(
+    *,
+    ticker: str,
+    delta: int,
+    px: float,
+    current: float,
+    equity: float,
+    target_weight: float,
+) -> str | None:
+    """Skip noisy US 7-share round-trips. Flattening to zero is always allowed."""
+    if int(delta) == 0:
+        return "qty=0"
+    after = float(current) + float(delta)
+    if abs(after) < 1e-6:
+        return None
+    notional = abs(float(delta)) * abs(float(px))
+    eq = max(abs(float(equity)), 1.0)
+    current_w = (float(current) * float(px)) / eq
+    gap = abs(float(target_weight) - current_w)
+    floor = min_notional_for(ticker)
+    if gap < MIN_WEIGHT_STEP:
+        return (
+            f"skip tiny |Δw|={gap:.4f} < {MIN_WEIGHT_STEP} "
+            f"({ticker} Δ{int(delta)} @ {px:.4f} notional={notional:.0f})"
+        )
+    if notional < floor:
+        market = "USD" if str(ticker).startswith("US.") else "HKD"
+        return f"skip min-notional {notional:.0f} < {floor:.0f} {market} ({ticker} Δ{int(delta)})"
+    return None
+
+
+def _parse_order_time(raw: Any) -> datetime | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S.%f%z",
+    ):
+        try:
+            dt = datetime.strptime(text.replace("Z", "+00:00") if fmt.endswith("%z") else text, fmt)
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=HK_TZ)
+            return dt
+        except ValueError:
+            continue
+    try:
+        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=HK_TZ)
+        return dt
+    except ValueError:
+        return None
+
+
+def order_age_minutes(row: dict[str, Any], now: datetime | None = None) -> float | None:
+    submitted = _parse_order_time(row.get("submitted_at") or row.get("time"))
+    if submitted is None:
+        return None
+    if now is None:
+        now = datetime.now(tz=HK_TZ)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=HK_TZ)
+    if submitted.tzinfo is None:
+        submitted = submitted.replace(tzinfo=HK_TZ)
+    return max((now - submitted.astimezone(now.tzinfo)).total_seconds() / 60.0, 0.0)
+
+
+def is_stale_working(
+    row: dict[str, Any],
+    *,
+    now: datetime | None = None,
+    current_bar_id: str = "",
+    stale_minutes: float = STALE_ORDER_MINUTES,
+) -> bool:
+    """True if this working limit is from a previous completed bar or older than T minutes."""
+    bar = str(row.get("bar_id") or "")
+    if bar and current_bar_id and bar != str(current_bar_id):
+        return True
+    age = order_age_minutes(row, now)
+    if age is not None and age >= float(stale_minutes):
+        return True
+    return False
+
+
+def stale_working_orders(
+    pending: list[dict[str, Any]],
+    *,
+    now: datetime | None = None,
+    current_bar_id: str = "",
+    stale_minutes: float = STALE_ORDER_MINUTES,
+) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in pending
+        if is_stale_working(row, now=now, current_bar_id=current_bar_id, stale_minutes=stale_minutes)
+    ]

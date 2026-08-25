@@ -25,3 +25,16 @@ FUTU_KLINE_ALIASES_V4: dict[str, tuple[str, ...]] = {
     # Index codes first. ETFs are last so a real SPX feed wins if OpenD ever adds it.
     "US.SPX": SPX_INDEX_CODES + SPX_PROXY_ETFS,
 }
+<<<<<<< HEAD
+=======
+
+# V2.10: same 5 tradable names + HSI only. Do not include SPX.
+FUTU_KLINE_ALIASES_V2_10: dict[str, tuple[str, ...]] = {
+    "HK.00700": ("HK.00700",),
+    "HK.03690": ("HK.03690",),
+    "HK.03750": ("HK.03750",),
+    "US.COST": ("US.COST",),
+    "US.KO": ("US.KO",),
+    "HK.HSI": HSI_CODES,
+}
+>>>>>>> 8f90d22 (Improving on our v2 model)
