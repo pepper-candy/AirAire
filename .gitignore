@@ -15,6 +15,7 @@ data/logs/*.jsonl
 **/__pycache__/
 *.pyc
 state.pkl
+state_v2_11.pkl
 
 /_*.py
 /_*.txt
