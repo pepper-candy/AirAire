@@ -1,0 +1,117 @@
+2026-08-25 09:36:29 | INFO     | airaire.utils | Session log -> C:\Users\klmong\Desktop\airaire\logs\trader_v2_11_20260825_093629.txt
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 | AirAire V2.11 warm-start — seed zip (confirm vs GPU run_trader.bat banner)
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 |   path   : C:\Users\klmong\Desktop\airaire\models\news_gpu_v2\best_model.zip
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 |   exists : True  (15.29 MB)
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 |   role   : V2 paper brain (782-dim, Box[-1,1]). Not checkpoint_2026-08-20.zip.
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 | AirAire V2.11 inference — seed zip (confirm vs GPU run_trader.bat banner)
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 |   path   : C:\Users\klmong\Desktop\airaire\models\news_gpu_v2_11\best_model.zip
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 |   exists : True  (15.29 MB)
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 |   role   : V2 paper brain (782-dim, Box[-1,1]). Not checkpoint_2026-08-20.zip.
+2026-08-25 09:36:29 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 09:36:29 | INFO     | airaire.inference_v2_11 | Session log file (survives closing this window): C:\Users\klmong\Desktop\airaire\logs\trader_v2_11_20260825_093629.txt
+2026-08-25 09:36:29 | INFO     | airaire.inference_v2_11 | V2.11 paper: obs_dim=782 expected=782 state=C:\Users\klmong\Desktop\airaire\state_v2_11.pkl (does not write state.pkl / news_gpu_v2)
+2026-08-25 09:36:29 | INFO     | airaire.inference_v2_11 | No state_v2_11.pkl — starting a flat V2.11 book (cash=1000000.00).
+2026-08-25 09:36:30 | INFO     | airaire.inference_v2_11 | Loaded V2 panel C:\Users\klmong\Desktop\airaire\data\enhanced\enhanced_data.parquet in memory (32673 rows). Will not persist it.
+2026-08-25 09:36:31 | INFO     | airaire.trading_env | News block aligned: bars=9527 coverage=95.1% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 09:36:36 | INFO     | airaire.inference | Loaded PPO policy from C:\Users\klmong\Desktop\airaire\models\news_gpu_v2_11\best_model.zip
+2026-08-25 09:36:36 | INFO     | airaire.inference_v2_11 | V2.11 env obs_dim=782 expected=782
+2026-08-25 09:36:36 | INFO     | airaire.inference | Connected to Futu OpenD at 127.0.0.1:11111
+2026-08-25 09:36:36 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD position HK.03750: pickle=0.0000 -> OpenD=1500.0000
+2026-08-25 09:36:36 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD position US.COST: pickle=0.0000 -> OpenD=-8.0000
+2026-08-25 09:36:36 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD position US.KO: pickle=0.0000 -> OpenD=32.0000
+2026-08-25 09:36:36 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD HK cash=30445.06 accinfo={'total_assets': 1012945.065, 'cash': 30445.065, 'market_val': 982500.0}
+2026-08-25 09:36:36 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD US cash=992696.79 accinfo={'total_assets': 1000303.193, 'cash': 992696.793, 'market_val': -4827.52}
+2026-08-25 09:36:36 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:36 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:36 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:36 | INFO     | airaire.data_loader | Futu 10-min US.COST: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:36 | INFO     | airaire.data_loader | Futu 10-min US.KO: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:36 | INFO     | airaire.data_loader | Futu history overlay: 177 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-24 16:00:00
+2026-08-25 09:36:36 | INFO     | airaire.inference | Catch-up merged 177 live Futu rows into the panel (32673 → 32673).
+2026-08-25 09:36:37 | INFO     | airaire.trading_env | News block aligned: bars=9527 coverage=95.1% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 09:36:37 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 09:36:37.564838 -> bar=9526/9526 dt=2026-08-24 16:00:00
+2026-08-25 09:36:37 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-02-24 09:15:00 env_now=2026-08-24 16:00:00 bar=9526/9526 rebuilt=True hk_cash=30445.06 equity=982945.06 seek=2026-08-25 09:36:37.581477 clock=HK
+2026-08-25 09:36:37 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=30445.06 equity=982945.06 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 1500.0, 'US.COST': -8.0, 'US.KO': 32.0})
+2026-08-25 09:36:37 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:37 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:37 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:37 | INFO     | airaire.data_loader | Futu 10-min US.COST: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:37 | INFO     | airaire.data_loader | Futu 10-min US.KO: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:36:37 | INFO     | airaire.data_loader | Futu history overlay: 177 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-24 16:00:00
+2026-08-25 09:36:37 | INFO     | airaire.inference | Catch-up merged 177 live Futu rows into the panel (32673 → 32673).
+2026-08-25 09:36:39 | INFO     | airaire.trading_env | News block aligned: bars=9527 coverage=95.1% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 09:36:39 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 09:36:39.051416 -> bar=9526/9526 dt=2026-08-24 16:00:00
+2026-08-25 09:36:39 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-24 16:00:00 env_now=2026-08-24 16:00:00 bar=9526/9526 rebuilt=True hk_cash=30445.06 equity=984445.06 seek=2026-08-25 09:36:39.066411 clock=HK
+2026-08-25 09:36:39 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.00700 across aliases ('TCEHY',).
+2026-08-25 09:36:39 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03690 across aliases ('MPNGY',).
+2026-08-25 09:36:40 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03750 across aliases ('300750',).
+2026-08-25 09:36:41 | INFO     | airaire.inference_v2_11 | Cash session in first 10 minutes — wait for a completed open bar (HK 09:40 / 13:10, US 09:40 ET).
+2026-08-25 09:36:41 | INFO     | airaire.inference_v2_11 | HK.00700 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:36:41 | INFO     | airaire.inference_v2_11 | HK.03690 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:36:41 | INFO     | airaire.inference_v2_11 | HK.03750 first 10-min cash bar still open — policy tgt +0.000, keep holdings=1500.0000, no order.
+2026-08-25 09:36:41 | INFO     | airaire.inference_v2_11 | US.COST market closed — policy tgt -1.000 (raw -1.000), keep holdings=-8.0000, no order.
+2026-08-25 09:36:41 | INFO     | airaire.inference_v2_11 | US.KO market closed — policy tgt +1.000 (raw +1.000), keep holdings=32.0000, no order.
+2026-08-25 09:36:41 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=HK bar=HK:2026-08-24 16:00:00 HK equity≈984445.06 cash=30445.06 | US equity≈987869.27 cash=992696.79
+2026-08-25 09:37:41 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:37:41 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:37:41 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:37:41 | INFO     | airaire.data_loader | Futu 10-min US.COST: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:37:41 | INFO     | airaire.data_loader | Futu 10-min US.KO: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:37:41 | INFO     | airaire.data_loader | Futu history overlay: 177 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-24 16:00:00
+2026-08-25 09:37:42 | INFO     | airaire.inference | Catch-up merged 177 live Futu rows into the panel (32673 → 32673).
+2026-08-25 09:37:43 | INFO     | airaire.trading_env | News block aligned: bars=9527 coverage=95.1% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 09:37:43 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 09:37:43.234914 -> bar=9526/9526 dt=2026-08-24 16:00:00
+2026-08-25 09:37:43 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-24 16:00:00 env_now=2026-08-24 16:00:00 bar=9526/9526 rebuilt=True hk_cash=30445.06 equity=981445.06 seek=2026-08-25 09:37:43.249907 clock=HK
+2026-08-25 09:37:43 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.00700 across aliases ('TCEHY',).
+2026-08-25 09:37:43 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03690 across aliases ('MPNGY',).
+2026-08-25 09:37:45 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03750 across aliases ('300750',).
+2026-08-25 09:37:45 | INFO     | airaire.inference_v2_11 | Cash session in first 10 minutes — wait for a completed open bar (HK 09:40 / 13:10, US 09:40 ET).
+2026-08-25 09:37:45 | INFO     | airaire.inference_v2_11 | HK.00700 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:37:45 | INFO     | airaire.inference_v2_11 | HK.03690 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:37:45 | INFO     | airaire.inference_v2_11 | HK.03750 first 10-min cash bar still open — policy tgt +0.000, keep holdings=1500.0000, no order.
+2026-08-25 09:37:45 | INFO     | airaire.inference_v2_11 | US.COST market closed — policy tgt -1.000 (raw -1.000), keep holdings=-8.0000, no order.
+2026-08-25 09:37:45 | INFO     | airaire.inference_v2_11 | US.KO market closed — policy tgt +1.000 (raw +1.000), keep holdings=32.0000, no order.
+2026-08-25 09:37:45 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=HK bar=HK:2026-08-24 16:00:00 HK equity≈981445.06 cash=30445.06 | US equity≈987869.27 cash=992696.79
+2026-08-25 09:38:45 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:38:45 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:38:45 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:38:45 | INFO     | airaire.data_loader | Futu 10-min US.COST: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:38:45 | INFO     | airaire.data_loader | Futu 10-min US.KO: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:38:45 | INFO     | airaire.data_loader | Futu history overlay: 177 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-24 16:00:00
+2026-08-25 09:38:45 | INFO     | airaire.inference | Catch-up merged 177 live Futu rows into the panel (32673 → 32673).
+2026-08-25 09:38:46 | INFO     | airaire.trading_env | News block aligned: bars=9527 coverage=95.1% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 09:38:46 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 09:38:46.670013 -> bar=9526/9526 dt=2026-08-24 16:00:00
+2026-08-25 09:38:46 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-24 16:00:00 env_now=2026-08-24 16:00:00 bar=9526/9526 rebuilt=True hk_cash=30445.06 equity=979195.06 seek=2026-08-25 09:38:46.686706 clock=HK
+2026-08-25 09:38:47 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.00700 across aliases ('TCEHY',).
+2026-08-25 09:38:47 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03690 across aliases ('MPNGY',).
+2026-08-25 09:38:47 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03750 across aliases ('300750',).
+2026-08-25 09:38:47 | INFO     | airaire.inference_v2_11 | Cash session in first 10 minutes — wait for a completed open bar (HK 09:40 / 13:10, US 09:40 ET).
+2026-08-25 09:38:47 | INFO     | airaire.inference_v2_11 | HK.00700 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:38:47 | INFO     | airaire.inference_v2_11 | HK.03690 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:38:47 | INFO     | airaire.inference_v2_11 | HK.03750 first 10-min cash bar still open — policy tgt +0.000, keep holdings=1500.0000, no order.
+2026-08-25 09:38:47 | INFO     | airaire.inference_v2_11 | US.COST market closed — policy tgt -1.000 (raw -1.000), keep holdings=-8.0000, no order.
+2026-08-25 09:38:47 | INFO     | airaire.inference_v2_11 | US.KO market closed — policy tgt +1.000 (raw +1.000), keep holdings=32.0000, no order.
+2026-08-25 09:38:47 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=HK bar=HK:2026-08-24 16:00:00 HK equity≈979195.06 cash=30445.06 | US equity≈987869.27 cash=992696.79
+2026-08-25 09:39:48 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:39:48 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:39:48 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 33 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:39:48 | INFO     | airaire.data_loader | Futu 10-min US.COST: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:39:48 | INFO     | airaire.data_loader | Futu 10-min US.KO: 39 bars (2026-08-24 09:40:00 → 2026-08-24 16:00:00)
+2026-08-25 09:39:48 | INFO     | airaire.data_loader | Futu history overlay: 177 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-24 16:00:00
+2026-08-25 09:39:48 | INFO     | airaire.inference | Catch-up merged 177 live Futu rows into the panel (32673 → 32673).
+2026-08-25 09:39:49 | INFO     | airaire.trading_env | News block aligned: bars=9527 coverage=95.1% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 09:39:49 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 09:39:49.421889 -> bar=9526/9526 dt=2026-08-24 16:00:00
+2026-08-25 09:39:49 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-24 16:00:00 env_now=2026-08-24 16:00:00 bar=9526/9526 rebuilt=True hk_cash=30445.06 equity=980695.06 seek=2026-08-25 09:39:49.438891 clock=HK
+2026-08-25 09:39:49 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.00700 across aliases ('TCEHY',).
+2026-08-25 09:39:50 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03690 across aliases ('MPNGY',).
+2026-08-25 09:39:50 | WARNING  | airaire.news_loader | NewsPoller: no headlines for HK.03750 across aliases ('300750',).
+2026-08-25 09:39:50 | INFO     | airaire.inference_v2_11 | Cash session in first 10 minutes — wait for a completed open bar (HK 09:40 / 13:10, US 09:40 ET).
+2026-08-25 09:39:50 | INFO     | airaire.inference_v2_11 | HK.00700 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:39:50 | INFO     | airaire.inference_v2_11 | HK.03690 first 10-min cash bar still open — policy tgt +0.000, keep holdings=0.0000, no order.
+2026-08-25 09:39:50 | INFO     | airaire.inference_v2_11 | HK.03750 first 10-min cash bar still open — policy tgt +0.000, keep holdings=1500.0000, no order.
+2026-08-25 09:39:50 | INFO     | airaire.inference_v2_11 | US.COST market closed — policy tgt -1.000 (raw -1.000), keep holdings=-8.0000, no order.
+2026-08-25 09:39:50 | INFO     | airaire.inference_v2_11 | US.KO market closed — policy tgt +1.000 (raw +1.000), keep holdings=32.0000, no order.
+2026-08-25 09:39:50 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=HK bar=HK:2026-08-24 16:00:00 HK equity≈980695.06 cash=30445.06 | US equity≈987869.27 cash=992696.79

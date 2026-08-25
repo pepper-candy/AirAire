@@ -1,0 +1,9 @@
+{
+  "seed_src": "C:\\Users\\klmong\\Desktop\\airaire\\models\\news_gpu_v2\\best_model.zip",
+  "seed_name": "best_model.zip",
+  "copied_at": "2026-08-25T23:55:38.718246+08:00",
+  "note": "Dump/live V2 best_model.zip. Confirm against the GPU trader banner. Not models/old/news_gpu_v2_test/checkpoint_2026-08-20.zip.",
+  "obs_dim": 782,
+  "n_core": 5,
+  "action": "Box(-1,1) with HK clipped to [0,1] in env step/_rebalance"
+}

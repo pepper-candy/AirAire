@@ -1,0 +1,7 @@
+2026-08-25 09:13:00 | INFO     | airaire.utils | Session log -> C:\Users\klmong\Desktop\airaire\logs\trader_v2_11_20260825_091300.txt
+2026-08-25 09:13:00 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 09:13:00 | INFO     | airaire.v2_11 | AirAire V2.11 warm-start — seed zip (confirm vs GPU run_trader.bat banner)
+2026-08-25 09:13:00 | INFO     | airaire.v2_11 |   path   : C:\Users\klmong\Desktop\airaire\models\news_gpu_v2\best_model.zip
+2026-08-25 09:13:00 | INFO     | airaire.v2_11 |   exists : True  (15.29 MB)
+2026-08-25 09:13:00 | INFO     | airaire.v2_11 |   role   : V2 paper brain (782-dim, Box[-1,1]). Not checkpoint_2026-08-20.zip.
+2026-08-25 09:13:00 | INFO     | airaire.v2_11 | ============================================================

@@ -1,0 +1,1225 @@
+2026-08-25 22:22:32 | INFO     | airaire.utils | Session log -> C:\Users\klmong\Desktop\airaire\logs\trader_v2_11_20260825_222232.txt
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 | AirAire V2.11 warm-start — seed zip (confirm vs GPU run_trader.bat banner)
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 |   path   : C:\Users\klmong\Desktop\airaire\models\news_gpu_v2\best_model.zip
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 |   exists : True  (15.29 MB)
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 |   role   : V2 paper brain (782-dim, Box[-1,1]). Not checkpoint_2026-08-20.zip.
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 | AirAire V2.11 inference — seed zip (confirm vs GPU run_trader.bat banner)
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 |   path   : C:\Users\klmong\Desktop\airaire\models\news_gpu_v2_11\best_model.zip
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 |   exists : True  (15.29 MB)
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 |   role   : V2 paper brain (782-dim, Box[-1,1]). Not checkpoint_2026-08-20.zip.
+2026-08-25 22:22:32 | INFO     | airaire.v2_11 | ============================================================
+2026-08-25 22:22:32 | INFO     | airaire.inference_v2_11 | Session log file (survives closing this window): C:\Users\klmong\Desktop\airaire\logs\trader_v2_11_20260825_222232.txt
+2026-08-25 22:22:32 | INFO     | airaire.inference_v2_11 | V2.11 paper: obs_dim=782 expected=782 state=C:\Users\klmong\Desktop\airaire\state_v2_11.pkl (does not write state.pkl / news_gpu_v2)
+2026-08-25 22:22:32 | WARNING  | airaire.inference_v2_11 | V2.11 dashboard push is ON — this shares the V2 blotter. Prefer --predict-now first.
+2026-08-25 22:22:32 | INFO     | airaire.inference | Loaded state.pkl updated_at=2026-08-25T07:50:59.134299+00:00 last_bar=HK:2026-08-25 15:40:00 cash=37195.06 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 1500.0, 'US.COST': -8.0, 'US.KO': 32.0} last_action={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 1.0, 'US.COST': -1.0, 'US.KO': 0.6917888522148132} pnl=0.00
+2026-08-25 22:22:34 | INFO     | airaire.inference_v2_11 | Loaded V2 panel C:\Users\klmong\Desktop\airaire\data\enhanced\enhanced_data.parquet in memory (32673 rows). Will not persist it.
+2026-08-25 22:22:35 | INFO     | airaire.trading_env | News block aligned: bars=9527 coverage=95.1% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:23:04 | INFO     | airaire.inference | Loaded PPO policy from C:\Users\klmong\Desktop\airaire\models\news_gpu_v2_11\best_model.zip
+2026-08-25 22:23:04 | INFO     | airaire.inference_v2_11 | V2.11 env obs_dim=782 expected=782
+2026-08-25 22:23:04 | INFO     | airaire.inference | Connected to Futu OpenD at 127.0.0.1:11111
+2026-08-25 22:23:04 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD position HK.03750: pickle=1500.0000 -> OpenD=0.0000
+2026-08-25 22:23:04 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD HK cash=34518.50 accinfo={'total_assets': 966018.496, 'cash': 34518.496, 'market_val': 931500.0}
+2026-08-25 22:23:04 | INFO     | airaire.inference_v2_11 | V2.11 sync OpenD US cash=992763.80 accinfo={'total_assets': 1000333.393, 'cash': 992763.801, 'market_val': -4797.32}
+2026-08-25 22:23:04 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:23:04 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:23:04 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:23:04 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:23:04 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:23:04 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:23:04.747908.
+2026-08-25 22:23:04 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:23:05 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32673 → 32780).
+2026-08-25 22:23:06 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:23:06 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:23:06.631085 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:23:06 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-02-24 09:15:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:23:06.652643 clock=US
+2026-08-25 22:23:06 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -8.0, 'US.KO': 32.0})
+2026-08-25 22:23:06 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:23:06 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:23:06 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:23:06 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:23:06 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:23:06 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:23:06.656643.
+2026-08-25 22:23:06 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:23:06 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32780 → 32780).
+2026-08-25 22:23:08 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:23:08 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:23:08.231987 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:23:08 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:23:08.247536 clock=US
+2026-08-25 22:23:08 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.178 n_headlines=50
+2026-08-25 22:23:09 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.149 n_headlines=50
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | Action: Sell 1015 Costco. policy tgt -1.00 (full short); book -8→-1023 (on fill, not submit); news +0.18 (Δ+0.18, no jump).
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | place SELL 1015 Costco @ 966.6100
+2026-08-25 22:23:19 | INFO     | airaire.inference | SIMULATE order ok SELL US.COST qty=1015 price=966.61 order_id=8905727
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | Submitted SELL US.COST qty=1015 @ 966.61 order_id=8905727 — pickle unchanged until fill.
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | Action: Sell 9925 Coca-Cola. policy tgt -0.92 (full short); book 32→-9893 (on fill, not submit); news +0.15 (Δ+0.15, no jump).
+2026-08-25 22:23:19 | INFO     | airaire.inference_v2_11 | place SELL 9925 Coca-Cola @ 91.7200
+2026-08-25 22:23:19 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:23:20 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:23:20 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:23:20 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -8.0, 'US.KO': 32.0})
+2026-08-25 22:23:21 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:24:21 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:24:21 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:24:21 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:24:21 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:24:21 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:24:21 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:24:21.474483.
+2026-08-25 22:24:21 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:24:21 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32780 → 32780).
+2026-08-25 22:24:22 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:24:22 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:24:22.883057 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:24:22 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:24:22.901053 clock=US
+2026-08-25 22:24:22 | INFO     | airaire.inference_v2_11 | Booked fill (not submit): FILLED SELL 1015 Costco @ 967.0000 hk_cash=34518.50 us_cash=1974268.80 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0}
+2026-08-25 22:24:23 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:24:24 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.178 n_headlines=50
+2026-08-25 22:24:25 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.149 n_headlines=50
+2026-08-25 22:24:25 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:24:25 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:24:25 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:24:25 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0029 < 0.01 (US.COST Δ2 @ 967.7600 notional=1936)
+2026-08-25 22:24:25 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:24:25 | INFO     | airaire.inference_v2_11 | Action: Sell 10794 Coca-Cola. policy tgt -1.00 (full short); book 32→-10762 (on fill, not submit); news +0.15 (Δ+0.00, no jump).
+2026-08-25 22:24:25 | INFO     | airaire.inference_v2_11 | place SELL 10794 Coca-Cola @ 91.7300
+2026-08-25 22:24:25 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:24:26 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:24:26 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:24:26 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:24:27 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:25:27 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:25:27 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:25:27 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:25:27 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:25:27 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:25:27 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:25:27.294639.
+2026-08-25 22:25:27 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:25:27 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32780 → 32780).
+2026-08-25 22:25:28 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:25:28 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:25:28.695087 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:25:28 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:25:28.714110 clock=US
+2026-08-25 22:25:29 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.178 n_headlines=50
+2026-08-25 22:25:30 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.149 n_headlines=50
+2026-08-25 22:25:30 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:25:30 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:25:30 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:25:30 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:25:30 | INFO     | airaire.inference_v2_11 | Action: Sell 10822 Coca-Cola. policy tgt -1.00 (full short); book 32→-10790 (on fill, not submit); news +0.15 (Δ+0.00, no jump).
+2026-08-25 22:25:30 | INFO     | airaire.inference_v2_11 | place SELL 10822 Coca-Cola @ 91.6200
+2026-08-25 22:25:30 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:25:31 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:25:31 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:25:31 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:25:32 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:26:32 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:26:32 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:26:32 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:26:32 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:26:32 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:26:32 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:26:32.248793.
+2026-08-25 22:26:32 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:26:32 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32780 → 32780).
+2026-08-25 22:26:33 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:26:33 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:26:33.698752 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:26:33 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:26:33.715756 clock=US
+2026-08-25 22:26:34 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.178 n_headlines=50
+2026-08-25 22:26:35 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.149 n_headlines=50
+2026-08-25 22:26:35 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:26:35 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:26:35 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:26:35 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0017 < 0.01 (US.COST Δ-2 @ 965.5300 notional=1931)
+2026-08-25 22:26:35 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:26:35 | INFO     | airaire.inference_v2_11 | Action: Sell 10832 Coca-Cola. policy tgt -1.00 (full short); book 32→-10800 (on fill, not submit); news +0.15 (Δ+0.00, no jump).
+2026-08-25 22:26:35 | INFO     | airaire.inference_v2_11 | place SELL 10832 Coca-Cola @ 91.6200
+2026-08-25 22:26:35 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:26:36 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:26:36 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:26:36 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:26:36 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:27:36 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:27:36 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:27:36 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:27:36 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:27:36 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:27:36 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:27:36.386710.
+2026-08-25 22:27:36 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:27:36 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32780 → 32780).
+2026-08-25 22:27:37 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:27:37 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:27:37.782271 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:27:37 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:27:37.802271 clock=US
+2026-08-25 22:27:38 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.178 n_headlines=50
+2026-08-25 22:27:39 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.149 n_headlines=50
+2026-08-25 22:27:39 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:27:39 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:27:39 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:27:39 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0012 < 0.01 (US.COST Δ-2 @ 965.8000 notional=1932)
+2026-08-25 22:27:39 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:27:39 | INFO     | airaire.inference_v2_11 | Action: Sell 10824 Coca-Cola. policy tgt -1.00 (full short); book 32→-10792 (on fill, not submit); news +0.15 (Δ+0.00, no jump).
+2026-08-25 22:27:39 | INFO     | airaire.inference_v2_11 | place SELL 10824 Coca-Cola @ 91.6600
+2026-08-25 22:27:39 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:27:40 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:27:40 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:27:40 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:27:41 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:28:41 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:28:41 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:28:41 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:28:41 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:28:41 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:28:41 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:28:41.033099.
+2026-08-25 22:28:41 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:28:41 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32780 → 32780).
+2026-08-25 22:28:42 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:28:42 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:28:42.533313 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:28:42 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:28:42.554318 clock=US
+2026-08-25 22:28:43 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.178 n_headlines=50
+2026-08-25 22:28:44 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.149 n_headlines=50
+2026-08-25 22:28:44 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:28:44 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:28:44 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:28:44 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0012 < 0.01 (US.COST Δ-2 @ 965.8000 notional=1932)
+2026-08-25 22:28:44 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:28:44 | INFO     | airaire.inference_v2_11 | Action: Sell 10821 Coca-Cola. policy tgt -1.00 (full short); book 32→-10789 (on fill, not submit); news +0.15 (Δ+0.00, no jump).
+2026-08-25 22:28:44 | INFO     | airaire.inference_v2_11 | place SELL 10821 Coca-Cola @ 91.6900
+2026-08-25 22:28:44 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:28:45 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:28:45 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:28:45 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:28:45 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:29:45 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:29:45 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:29:45 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:29:45 | INFO     | airaire.data_loader | Futu 10-min US.COST: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:29:45 | INFO     | airaire.data_loader | Futu 10-min US.KO: 44 bars (2026-08-24 09:40:00 → 2026-08-25 10:20:00)
+2026-08-25 22:29:45 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:29:45.636586.
+2026-08-25 22:29:45 | INFO     | airaire.data_loader | Futu history overlay: 284 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:29:45 | INFO     | airaire.inference | Catch-up merged 284 live Futu rows into the panel (32780 → 32780).
+2026-08-25 22:29:47 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:29:47 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:29:47.398294 -> bar=9530/9559 dt=2026-08-25 10:10:00
+2026-08-25 22:29:47 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:10:00 bar=9530/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:29:47.418288 clock=US
+2026-08-25 22:29:48 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.178 n_headlines=50
+2026-08-25 22:29:49 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.149 n_headlines=50
+2026-08-25 22:29:49 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:29:49 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:29:49 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:29:49 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0032 < 0.01 (US.COST Δ-4 @ 964.8100 notional=3859)
+2026-08-25 22:29:49 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:29:49 | INFO     | airaire.inference_v2_11 | Action: Sell 10827 Coca-Cola. policy tgt -1.00 (full short); book 32→-10795 (on fill, not submit); news +0.15 (Δ+0.00, no jump).
+2026-08-25 22:29:49 | INFO     | airaire.inference_v2_11 | place SELL 10827 Coca-Cola @ 91.7300
+2026-08-25 22:29:49 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:29:50 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:29:50 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:29:50 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:29:50 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:30:50 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:30:50 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:30:50 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:30:50 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:30:50 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:30:50 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:30:50.696762.
+2026-08-25 22:30:50 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:30:50 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32780 → 32782).
+2026-08-25 22:30:52 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:30:52 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:30:52.164902 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:30:52 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:10:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:30:52.177896 clock=US
+2026-08-25 22:30:53 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:30:54 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:30:54 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:30:54 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:30:54 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:30:54 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0038 < 0.01 (US.COST Δ-4 @ 964.5400 notional=3858)
+2026-08-25 22:30:54 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:30:54 | INFO     | airaire.inference_v2_11 | Action: Sell 10823 Coca-Cola. policy tgt -1.00 (full short); book 32→-10791 (on fill, not submit); news +0.17 (Δ+0.02, no jump).
+2026-08-25 22:30:54 | INFO     | airaire.inference_v2_11 | place SELL 10823 Coca-Cola @ 91.7900
+2026-08-25 22:30:54 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:30:55 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:30:55 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:30:55 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:30:55 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:31:55 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:31:55 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:31:55 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:31:55 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:31:55 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:31:55 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:31:55.541740.
+2026-08-25 22:31:55 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:31:55 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:31:56 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:31:56 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:31:56.922675 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:31:56 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:31:56.938460 clock=US
+2026-08-25 22:31:57 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:31:58 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:31:58 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:31:58 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:31:58 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:31:58 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0040 < 0.01 (US.COST Δ-5 @ 964.4400 notional=4822)
+2026-08-25 22:31:58 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:31:58 | INFO     | airaire.inference_v2_11 | Action: Sell 10829 Coca-Cola. policy tgt -1.00 (full short); book 32→-10797 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:31:58 | INFO     | airaire.inference_v2_11 | place SELL 10829 Coca-Cola @ 91.7500
+2026-08-25 22:31:58 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:31:59 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:31:59 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:31:59 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:32:00 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:33:00 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:33:00 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:33:00 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:33:00 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:33:00 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:33:00 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:33:00.249985.
+2026-08-25 22:33:00 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:33:00 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:33:01 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:33:01 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:33:01.631940 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:33:01 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:33:01.648938 clock=US
+2026-08-25 22:33:02 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:33:02 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:33:02 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:33:02 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:33:02 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:33:02 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0052 < 0.01 (US.COST Δ-6 @ 963.8500 notional=5783)
+2026-08-25 22:33:02 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:33:02 | INFO     | airaire.inference_v2_11 | Action: Sell 10847 Coca-Cola. policy tgt -1.00 (full short); book 32→-10815 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:33:02 | INFO     | airaire.inference_v2_11 | place SELL 10847 Coca-Cola @ 91.6500
+2026-08-25 22:33:02 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:33:03 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:33:03 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:33:03 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:33:03 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:34:03 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:34:03 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:34:03 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:34:03 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:34:03 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:34:03 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:34:03.556379.
+2026-08-25 22:34:03 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:34:03 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:34:04 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:34:04 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:34:04.992260 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:34:05 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:34:05.006268 clock=US
+2026-08-25 22:34:05 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:34:06 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:34:06 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:34:06 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:34:06 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:34:06 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0044 < 0.01 (US.COST Δ-5 @ 964.2600 notional=4821)
+2026-08-25 22:34:06 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:34:06 | INFO     | airaire.inference_v2_11 | Action: Sell 10839 Coca-Cola. policy tgt -1.00 (full short); book 32→-10807 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:34:06 | INFO     | airaire.inference_v2_11 | place SELL 10839 Coca-Cola @ 91.6800
+2026-08-25 22:34:06 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:34:07 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:34:07 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:34:07 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:34:07 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:35:07 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:35:07 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:35:07 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:35:07 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:35:07 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:35:07 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:35:07.494498.
+2026-08-25 22:35:07 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:35:07 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:35:08 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:35:08 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:35:08.847217 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:35:08 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:35:08.864210 clock=US
+2026-08-25 22:35:09 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:35:09 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:35:09 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:35:09 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:35:09 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:35:09 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0053 < 0.01 (US.COST Δ-6 @ 963.7900 notional=5783)
+2026-08-25 22:35:09 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:35:09 | INFO     | airaire.inference_v2_11 | Action: Sell 10845 Coca-Cola. policy tgt -1.00 (full short); book 32→-10813 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:35:09 | INFO     | airaire.inference_v2_11 | place SELL 10845 Coca-Cola @ 91.6800
+2026-08-25 22:35:09 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:35:10 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:35:10 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:35:10 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:35:10 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:36:10 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:36:10 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:36:10 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:36:10 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:36:10 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:36:10 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:36:10.841503.
+2026-08-25 22:36:10 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:36:11 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:36:12 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:36:12 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:36:12.334532 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:36:12 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:36:12.349105 clock=US
+2026-08-25 22:36:12 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:36:13 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:36:13 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:36:13 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:36:13 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:36:13 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0042 < 0.01 (US.COST Δ-5 @ 964.3600 notional=4822)
+2026-08-25 22:36:13 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:36:13 | INFO     | airaire.inference_v2_11 | Action: Sell 10836 Coca-Cola. policy tgt -1.00 (full short); book 32→-10804 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:36:13 | INFO     | airaire.inference_v2_11 | place SELL 10836 Coca-Cola @ 91.7000
+2026-08-25 22:36:13 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:36:14 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:36:14 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:36:14 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:36:14 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:37:14 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:37:14 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:37:14 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:37:14 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:37:14 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:37:14 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:37:14.810729.
+2026-08-25 22:37:14 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:37:15 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:37:16 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:37:16 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:37:16.220884 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:37:16 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:37:16.235499 clock=US
+2026-08-25 22:37:17 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:37:18 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:37:18 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:37:18 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:37:18 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:37:18 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0045 < 0.01 (US.COST Δ-5 @ 964.1800 notional=4821)
+2026-08-25 22:37:18 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:37:18 | INFO     | airaire.inference_v2_11 | Action: Sell 10853 Coca-Cola. policy tgt -1.00 (full short); book 32→-10821 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:37:18 | INFO     | airaire.inference_v2_11 | place SELL 10853 Coca-Cola @ 91.5700
+2026-08-25 22:37:18 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:37:19 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:37:19 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:37:19 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:37:19 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:38:19 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:38:19 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:38:19 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:38:19 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:38:19 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:38:19 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:38:19.290693.
+2026-08-25 22:38:19 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:38:19 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:38:20 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:38:20 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:38:20.782141 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:38:20 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:38:20.798203 clock=US
+2026-08-25 22:38:21 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:38:22 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:38:22 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:38:22 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:38:22 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:38:22 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0061 < 0.01 (US.COST Δ-7 @ 963.4300 notional=6744)
+2026-08-25 22:38:22 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:38:22 | INFO     | airaire.inference_v2_11 | Action: Sell 10867 Coca-Cola. policy tgt -1.00 (full short); book 32→-10835 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:38:22 | INFO     | airaire.inference_v2_11 | place SELL 10867 Coca-Cola @ 91.5200
+2026-08-25 22:38:22 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:38:23 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:38:23 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:38:23 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:38:24 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:39:24 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:39:24 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:39:24 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:39:24 | INFO     | airaire.data_loader | Futu 10-min US.COST: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:39:24 | INFO     | airaire.data_loader | Futu 10-min US.KO: 45 bars (2026-08-24 09:40:00 → 2026-08-25 10:30:00)
+2026-08-25 22:39:24 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:39:24.153153.
+2026-08-25 22:39:24 | INFO     | airaire.data_loader | Futu history overlay: 286 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:39:24 | INFO     | airaire.inference | Catch-up merged 286 live Futu rows into the panel (32782 → 32782).
+2026-08-25 22:39:25 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:39:25 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:39:25.508818 -> bar=9531/9559 dt=2026-08-25 10:20:00
+2026-08-25 22:39:25 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:20:00 bar=9531/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:39:25.523805 clock=US
+2026-08-25 22:39:26 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:39:27 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:39:27 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:39:27 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:39:27 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:39:27 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0059 < 0.01 (US.COST Δ-7 @ 963.5100 notional=6745)
+2026-08-25 22:39:27 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:39:27 | INFO     | airaire.inference_v2_11 | Action: Sell 10868 Coca-Cola. policy tgt -1.00 (full short); book 32→-10836 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:39:27 | INFO     | airaire.inference_v2_11 | place SELL 10868 Coca-Cola @ 91.5100
+2026-08-25 22:39:27 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:39:28 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:39:28 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:39:28 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:39:28 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:40:28 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:40:28 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:40:28 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:40:28 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:40:28 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:40:28 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:40:28.497311.
+2026-08-25 22:40:28 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:40:28 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32782 → 32784).
+2026-08-25 22:40:29 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:40:29 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:40:29.964732 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:40:29 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:20:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:40:29.977731 clock=US
+2026-08-25 22:40:30 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:40:31 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:40:31 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:40:31 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:40:31 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:40:31 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0041 < 0.01 (US.COST Δ-5 @ 964.3900 notional=4822)
+2026-08-25 22:40:31 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:40:31 | INFO     | airaire.inference_v2_11 | Action: Buy 10788 Coca-Cola. policy tgt +1.00 (full long); book 32→10820 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:40:31 | INFO     | airaire.inference_v2_11 | place BUY 10788 Coca-Cola @ 91.5500
+2026-08-25 22:40:32 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:40:32 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:40:32 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:40:32 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:40:33 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:41:33 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:41:33 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:41:33 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:41:33 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:41:33 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:41:33 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:41:33.326717.
+2026-08-25 22:41:33 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:41:33 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:41:34 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:41:34 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:41:34.693924 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:41:34 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:41:34.707479 clock=US
+2026-08-25 22:41:35 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:41:35 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:41:36 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:41:36 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:41:36 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:41:36 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0033 < 0.01 (US.COST Δ-4 @ 964.7700 notional=3859)
+2026-08-25 22:41:36 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:41:36 | INFO     | airaire.inference_v2_11 | Action: Buy 10779 Coca-Cola. policy tgt +1.00 (full long); book 32→10811 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:41:36 | INFO     | airaire.inference_v2_11 | place BUY 10779 Coca-Cola @ 91.5900
+2026-08-25 22:41:36 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:41:36 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:41:36 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:41:36 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:41:37 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:42:37 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:42:37 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:42:37 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:42:37 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:42:37 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:42:37 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:42:37.094622.
+2026-08-25 22:42:37 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:42:37 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:42:38 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:42:38 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:42:38.559101 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:42:38 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:42:38.575100 clock=US
+2026-08-25 22:42:39 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:42:40 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:42:40 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:42:40 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:42:40 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:42:40 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0020 < 0.01 (US.COST Δ-3 @ 965.4100 notional=2896)
+2026-08-25 22:42:40 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:42:40 | INFO     | airaire.inference_v2_11 | Action: Buy 10761 Coca-Cola. policy tgt +1.00 (full long); book 32→10793 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:42:40 | INFO     | airaire.inference_v2_11 | place BUY 10761 Coca-Cola @ 91.6800
+2026-08-25 22:42:40 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:42:41 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:42:41 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:42:41 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:42:41 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:43:41 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:43:41 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:43:41 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:43:42 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:43:42 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:43:42 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:43:41.912175.
+2026-08-25 22:43:42 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:43:42 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:43:43 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:43:43 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:43:43.365804 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:43:43 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:43:43.377803 clock=US
+2026-08-25 22:43:44 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:43:45 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:43:45 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:43:45 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:43:45 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:43:45 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0025 < 0.01 (US.COST Δ-3 @ 965.1500 notional=2895)
+2026-08-25 22:43:45 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:43:45 | INFO     | airaire.inference_v2_11 | Action: Buy 10764 Coca-Cola. policy tgt +1.00 (full long); book 32→10796 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:43:45 | INFO     | airaire.inference_v2_11 | place BUY 10764 Coca-Cola @ 91.6800
+2026-08-25 22:43:45 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:43:46 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:43:46 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:43:46 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:43:46 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:44:46 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:44:46 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:44:46 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:44:46 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:44:46 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:44:46 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:44:46.342131.
+2026-08-25 22:44:46 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:44:46 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:44:47 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:44:47 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:44:47.924577 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:44:47 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:44:47.938404 clock=US
+2026-08-25 22:44:48 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:44:48 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:44:48 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:44:48 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:44:48 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:44:48 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0028 < 0.01 (US.COST Δ-3 @ 965.0100 notional=2895)
+2026-08-25 22:44:48 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:44:48 | INFO     | airaire.inference_v2_11 | Action: Buy 10768 Coca-Cola. policy tgt +1.00 (full long); book 32→10800 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:44:48 | INFO     | airaire.inference_v2_11 | place BUY 10768 Coca-Cola @ 91.6600
+2026-08-25 22:44:48 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:44:49 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:44:49 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:44:49 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:44:50 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:45:50 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:45:50 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:45:50 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:45:50 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:45:50 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:45:50 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:45:50.316675.
+2026-08-25 22:45:50 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:45:50 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:45:51 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:45:51 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:45:51.684829 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:45:51 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:45:51.700445 clock=US
+2026-08-25 22:45:52 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:45:53 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:45:53 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:45:53 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:45:53 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:45:53 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0030 < 0.01 (US.COST Δ-4 @ 964.9300 notional=3860)
+2026-08-25 22:45:53 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:45:53 | INFO     | airaire.inference_v2_11 | Action: Buy 10763 Coca-Cola. policy tgt +1.00 (full long); book 32→10795 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:45:53 | INFO     | airaire.inference_v2_11 | place BUY 10763 Coca-Cola @ 91.7100
+2026-08-25 22:45:53 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:45:54 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:45:54 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:45:54 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:45:54 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:46:54 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:46:54 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:46:54 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:46:55 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:46:55 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:46:55 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:46:54.914840.
+2026-08-25 22:46:55 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:46:55 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:46:56 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:46:56 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:46:56.247069 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:46:56 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:46:56.262071 clock=US
+2026-08-25 22:46:57 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:46:58 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:46:58 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:46:58 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:46:58 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:46:58 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0030 < 0.01 (US.COST Δ-4 @ 964.9200 notional=3860)
+2026-08-25 22:46:58 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:46:58 | INFO     | airaire.inference_v2_11 | Action: Buy 10769 Coca-Cola. policy tgt +1.00 (full long); book 32→10801 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:46:58 | INFO     | airaire.inference_v2_11 | place BUY 10769 Coca-Cola @ 91.6600
+2026-08-25 22:46:58 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:46:59 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:46:59 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:46:59 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:46:59 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:47:59 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:47:59 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:47:59 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:47:59 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:47:59 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:47:59 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:47:59.510927.
+2026-08-25 22:47:59 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:47:59 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:48:00 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:48:00 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:48:00.932421 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:48:00 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:48:00.948080 clock=US
+2026-08-25 22:48:01 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:48:02 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:48:02 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:48:02 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:48:02 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:48:02 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0031 < 0.01 (US.COST Δ-4 @ 964.8900 notional=3860)
+2026-08-25 22:48:02 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:48:02 | INFO     | airaire.inference_v2_11 | Action: Buy 10774 Coca-Cola. policy tgt +1.00 (full long); book 32→10806 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:48:02 | INFO     | airaire.inference_v2_11 | place BUY 10774 Coca-Cola @ 91.6200
+2026-08-25 22:48:02 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:48:03 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:48:03 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:48:03 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:48:03 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:49:03 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:49:03 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:49:03 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:49:03 | INFO     | airaire.data_loader | Futu 10-min US.COST: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:49:03 | INFO     | airaire.data_loader | Futu 10-min US.KO: 46 bars (2026-08-24 09:40:00 → 2026-08-25 10:40:00)
+2026-08-25 22:49:03 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:49:03.867621.
+2026-08-25 22:49:03 | INFO     | airaire.data_loader | Futu history overlay: 288 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:49:04 | INFO     | airaire.inference | Catch-up merged 288 live Futu rows into the panel (32784 → 32784).
+2026-08-25 22:49:05 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:49:05 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:49:05.190917 -> bar=9532/9559 dt=2026-08-25 10:30:00
+2026-08-25 22:49:05 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:30:00 bar=9532/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:49:05.207466 clock=US
+2026-08-25 22:49:05 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:49:06 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:49:06 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:49:06 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:49:06 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:49:06 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0019 < 0.01 (US.COST Δ-2 @ 965.4400 notional=1931)
+2026-08-25 22:49:06 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:49:06 | INFO     | airaire.inference_v2_11 | Action: Buy 10778 Coca-Cola. policy tgt +1.00 (full long); book 32→10810 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:49:06 | INFO     | airaire.inference_v2_11 | place BUY 10778 Coca-Cola @ 91.5400
+2026-08-25 22:49:06 | ERROR    | airaire.inference | place_order failed BUY US.KO classified=buying_power raw=Insufficient buying power. To place the trade, please increase your account buying power first.
+2026-08-25 22:49:07 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:49:07 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=buying_power. Book unchanged.
+2026-08-25 22:49:07 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:49:07 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:50:07 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:50:07 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:50:07 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:50:07 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:50:07 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:50:07 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:50:07.573819.
+2026-08-25 22:50:07 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:50:07 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32784 → 32786).
+2026-08-25 22:50:08 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:50:08 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:50:08.979582 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:50:09 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:30:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:50:09.000585 clock=US
+2026-08-25 22:50:09 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:50:10 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:50:10 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:50:10 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:50:10 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:50:10 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0026 < 0.01 (US.COST Δ-3 @ 965.1200 notional=2895)
+2026-08-25 22:50:10 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:50:10 | INFO     | airaire.inference_v2_11 | Action: Sell 10847 Coca-Cola. policy tgt -1.00 (full short); book 32→-10815 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:50:10 | INFO     | airaire.inference_v2_11 | place SELL 10847 Coca-Cola @ 91.5300
+2026-08-25 22:50:10 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:50:11 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:50:11 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:50:11 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:50:11 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:51:11 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:51:11 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:51:11 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:51:11 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:51:11 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:51:11 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:51:11.657687.
+2026-08-25 22:51:11 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:51:11 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:51:13 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:51:13 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:51:13.042430 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:51:13 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:51:13.056698 clock=US
+2026-08-25 22:51:13 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:51:14 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:51:14 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:51:14 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:51:14 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:51:14 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0027 < 0.01 (US.COST Δ-3 @ 965.0700 notional=2895)
+2026-08-25 22:51:14 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:51:14 | INFO     | airaire.inference_v2_11 | Action: Sell 10847 Coca-Cola. policy tgt -1.00 (full short); book 32→-10815 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:51:14 | INFO     | airaire.inference_v2_11 | place SELL 10847 Coca-Cola @ 91.5400
+2026-08-25 22:51:14 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:51:15 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:51:15 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:51:15 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:51:15 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:52:15 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:52:15 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:52:15 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:52:15 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:52:15 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:52:15 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:52:15.763003.
+2026-08-25 22:52:15 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:52:15 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:52:17 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:52:17 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:52:17.115494 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:52:17 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:52:17.128600 clock=US
+2026-08-25 22:52:18 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:52:18 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:52:18 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:52:18 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:52:18 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:52:18 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0032 < 0.01 (US.COST Δ-4 @ 964.8400 notional=3859)
+2026-08-25 22:52:18 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:52:18 | INFO     | airaire.inference_v2_11 | Action: Sell 10851 Coca-Cola. policy tgt -1.00 (full short); book 32→-10819 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:52:18 | INFO     | airaire.inference_v2_11 | place SELL 10851 Coca-Cola @ 91.5300
+2026-08-25 22:52:18 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:52:19 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:52:19 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:52:19 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:52:19 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:53:19 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:53:19 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:53:19 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:53:19 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:53:19 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:53:19 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:53:19.582245.
+2026-08-25 22:53:19 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:53:19 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:53:20 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:53:20 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:53:20.981586 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:53:20 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:53:20.994583 clock=US
+2026-08-25 22:53:21 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:53:22 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:53:22 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:53:22 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:53:22 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:53:22 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0046 < 0.01 (US.COST Δ-5 @ 964.1600 notional=4821)
+2026-08-25 22:53:22 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:53:22 | INFO     | airaire.inference_v2_11 | Action: Sell 10857 Coca-Cola. policy tgt -1.00 (full short); book 32→-10825 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:53:22 | INFO     | airaire.inference_v2_11 | place SELL 10857 Coca-Cola @ 91.5400
+2026-08-25 22:53:22 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:53:23 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:53:23 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:53:23 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:53:23 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:54:23 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:54:23 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:54:23 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:54:23 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:54:23 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:54:23 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:54:23.595405.
+2026-08-25 22:54:23 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:54:23 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:54:24 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:54:24 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:54:24.925130 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:54:24 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:54:24.939207 clock=US
+2026-08-25 22:54:25 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:54:26 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:54:26 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:54:26 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:54:26 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:54:26 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0041 < 0.01 (US.COST Δ-5 @ 964.3800 notional=4822)
+2026-08-25 22:54:26 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:54:26 | INFO     | airaire.inference_v2_11 | Action: Sell 10844 Coca-Cola. policy tgt -1.00 (full short); book 32→-10812 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:54:26 | INFO     | airaire.inference_v2_11 | place SELL 10844 Coca-Cola @ 91.6300
+2026-08-25 22:54:26 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:54:27 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:54:27 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:54:27 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:54:28 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:55:28 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:55:28 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:55:28 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:55:28 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:55:28 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:55:28 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:55:28.040659.
+2026-08-25 22:55:28 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:55:28 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:55:29 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:55:29 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:55:29.492332 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:55:29 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:55:29.507328 clock=US
+2026-08-25 22:55:30 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:55:30 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:55:30 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:55:30 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:55:30 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:55:30 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0031 < 0.01 (US.COST Δ-4 @ 964.8800 notional=3860)
+2026-08-25 22:55:30 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:55:30 | INFO     | airaire.inference_v2_11 | Action: Sell 10835 Coca-Cola. policy tgt -1.00 (full short); book 32→-10803 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:55:30 | INFO     | airaire.inference_v2_11 | place SELL 10835 Coca-Cola @ 91.6600
+2026-08-25 22:55:30 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:55:31 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:55:31 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:55:31 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:55:32 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:56:32 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:56:32 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:56:32 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:56:32 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:56:32 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:56:32 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:56:32.121380.
+2026-08-25 22:56:32 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:56:32 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:56:33 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:56:33 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:56:33.512008 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:56:33 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:56:33.526749 clock=US
+2026-08-25 22:56:34 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:56:35 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:56:35 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:56:35 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:56:35 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:56:35 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0033 < 0.01 (US.COST Δ-4 @ 964.7600 notional=3859)
+2026-08-25 22:56:35 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:56:35 | INFO     | airaire.inference_v2_11 | Action: Sell 10840 Coca-Cola. policy tgt -1.00 (full short); book 32→-10808 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:56:35 | INFO     | airaire.inference_v2_11 | place SELL 10840 Coca-Cola @ 91.6300
+2026-08-25 22:56:35 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:56:36 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:56:36 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:56:36 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:56:36 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:57:36 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:57:36 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:57:36 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:57:36 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:57:36 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:57:36 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:57:36.635544.
+2026-08-25 22:57:36 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:57:36 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:57:38 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:57:38 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:57:38.158209 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:57:38 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:57:38.171207 clock=US
+2026-08-25 22:57:39 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:57:40 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:57:40 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:57:40 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:57:40 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:57:40 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0042 < 0.01 (US.COST Δ-5 @ 964.3400 notional=4822)
+2026-08-25 22:57:40 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:57:40 | INFO     | airaire.inference_v2_11 | Action: Sell 10843 Coca-Cola. policy tgt -1.00 (full short); book 32→-10811 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:57:40 | INFO     | airaire.inference_v2_11 | place SELL 10843 Coca-Cola @ 91.6400
+2026-08-25 22:57:40 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:57:41 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:57:41 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:57:41 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:57:41 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:58:41 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:58:41 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:58:41 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:58:41 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:58:41 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:58:41 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:58:41.803105.
+2026-08-25 22:58:41 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:58:41 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:58:43 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:58:43 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:58:43.167296 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:58:43 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:58:43.180288 clock=US
+2026-08-25 22:58:44 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:58:44 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:58:44 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:58:44 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:58:44 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:58:44 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0042 < 0.01 (US.COST Δ-5 @ 964.3600 notional=4822)
+2026-08-25 22:58:44 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:58:44 | INFO     | airaire.inference_v2_11 | Action: Sell 10848 Coca-Cola. policy tgt -1.00 (full short); book 32→-10816 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:58:44 | INFO     | airaire.inference_v2_11 | place SELL 10848 Coca-Cola @ 91.6000
+2026-08-25 22:58:44 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:58:45 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:58:45 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:58:45 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:58:45 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 22:59:45 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:59:45 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:59:45 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 22:59:45 | INFO     | airaire.data_loader | Futu 10-min US.COST: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:59:45 | INFO     | airaire.data_loader | Futu 10-min US.KO: 47 bars (2026-08-24 09:40:00 → 2026-08-25 10:50:00)
+2026-08-25 22:59:45 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 22:59:45.661912.
+2026-08-25 22:59:45 | INFO     | airaire.data_loader | Futu history overlay: 290 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 22:59:45 | INFO     | airaire.inference | Catch-up merged 290 live Futu rows into the panel (32786 → 32786).
+2026-08-25 22:59:47 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 22:59:47 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 10:59:47.128659 -> bar=9533/9559 dt=2026-08-25 10:40:00
+2026-08-25 22:59:47 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:40:00 bar=9533/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 10:59:47.142280 clock=US
+2026-08-25 22:59:47 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.182 n_headlines=50
+2026-08-25 22:59:48 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.167 n_headlines=50
+2026-08-25 22:59:48 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:59:48 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 22:59:48 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 22:59:48 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0054 < 0.01 (US.COST Δ-6 @ 963.7600 notional=5783)
+2026-08-25 22:59:48 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 22:59:48 | INFO     | airaire.inference_v2_11 | Action: Sell 10854 Coca-Cola. policy tgt -1.00 (full short); book 32→-10822 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 22:59:48 | INFO     | airaire.inference_v2_11 | place SELL 10854 Coca-Cola @ 91.6000
+2026-08-25 22:59:48 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 22:59:49 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 22:59:49 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 22:59:49 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 22:59:49 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:00:49 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:00:49 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:00:50 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:00:50 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:00:50 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:00:50 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:00:49.940265.
+2026-08-25 23:00:50 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:00:50 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32786 → 32788).
+2026-08-25 23:00:51 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:00:51 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:00:51.303364 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:00:51 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:40:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:00:51.317355 clock=US
+2026-08-25 23:00:52 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:00:53 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0058 < 0.01 (US.COST Δ-6 @ 963.5500 notional=5781)
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ-0.00, no jump).
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | Action: Buy 7809 Coca-Cola. policy tgt +0.72 (long); book 32→7841 (on fill, not submit); news +0.17 (Δ-0.00, no jump).
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | place BUY 7809 Coca-Cola @ 91.6600
+2026-08-25 23:00:53 | INFO     | airaire.inference | SIMULATE order ok BUY US.KO qty=7809 price=91.66 order_id=8905945
+2026-08-25 23:00:53 | INFO     | airaire.inference_v2_11 | Submitted BUY US.KO qty=7809 @ 91.66 order_id=8905945 — pickle unchanged until fill.
+2026-08-25 23:00:53 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 23:00:53 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:01:53 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:01:53 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:01:53 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:01:53 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:01:53 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:01:53 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:01:53.651150.
+2026-08-25 23:01:53 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:01:53 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:01:55 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:01:55 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:01:55.078997 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:01:55 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:01:55.091994 clock=US
+2026-08-25 23:01:55 | INFO     | airaire.inference_v2_11 | OpenD pending: BUY 7809 US.KO @91.66
+2026-08-25 23:01:56 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:01:56 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:01:57 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:01:57 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:01:57 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:01:57 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:01:57 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0050 < 0.01 (US.COST Δ-6 @ 963.9700 notional=5784)
+2026-08-25 23:01:57 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:01:57 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Buy 7804 Coca-Cola. policy tgt +0.72 (long); book 32→7836 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:01:57 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 23:01:57 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:02:57 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:02:57 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:02:57 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:02:57 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:02:57 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:02:57 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:02:57.668769.
+2026-08-25 23:02:57 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:02:57 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:02:59 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:02:59 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:02:59.113085 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:02:59 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:02:59.126078 clock=US
+2026-08-25 23:02:59 | INFO     | airaire.inference_v2_11 | OpenD pending: BUY 7809 US.KO @91.66
+2026-08-25 23:03:00 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:03:00 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:03:00 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:03:00 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:03:00 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:03:00 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:03:00 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0056 < 0.01 (US.COST Δ-6 @ 963.6500 notional=5782)
+2026-08-25 23:03:00 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:03:00 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Buy 7805 Coca-Cola. policy tgt +0.72 (long); book 32→7837 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:03:00 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 23:03:00 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:04:01 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:04:01 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:04:01 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:04:01 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:04:01 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:04:01 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:04:00.988910.
+2026-08-25 23:04:01 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:04:01 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:04:02 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:04:02 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:04:02.446932 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:04:02 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:04:02.461483 clock=US
+2026-08-25 23:04:02 | INFO     | airaire.inference_v2_11 | OpenD pending: BUY 7809 US.KO @91.66
+2026-08-25 23:04:03 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:04:04 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:04:04 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:04:04 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:04:04 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:04:04 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:04:04 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0047 < 0.01 (US.COST Δ-5 @ 964.0800 notional=4820)
+2026-08-25 23:04:04 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:04:04 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Buy 7803 Coca-Cola. policy tgt +0.72 (long); book 32→7835 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:04:04 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 32.0})
+2026-08-25 23:04:04 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:05:04 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:05:04 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:05:04 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:05:04 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:05:04 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:05:04 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:05:04.443302.
+2026-08-25 23:05:04 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:05:04 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:05:05 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:05:05 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:05:05.792531 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:05:05 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:05:05.805529 clock=US
+2026-08-25 23:05:05 | INFO     | airaire.inference_v2_11 | Booked fill (not submit): FILLED BUY 7809 Coca-Cola @ 91.6500 hk_cash=34518.50 us_cash=1258573.95 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 7841.0}
+2026-08-25 23:05:06 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 23:05:07 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:05:08 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0028 < 0.01 (US.COST Δ-3 @ 964.7700 notional=2894)
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0006 < 0.01 (US.KO Δ-7 @ 91.5800 notional=641)
+2026-08-25 23:05:08 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target +0.72 Coca-Cola. policy tgt +0.72 (long); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:05:08 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 7841.0})
+2026-08-25 23:05:08 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:06:08 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:06:08 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:06:08 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:06:08 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:06:08 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:06:08 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:06:08.711150.
+2026-08-25 23:06:08 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:06:08 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:06:10 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:06:10 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:06:10.194672 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:06:10 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:06:10.206223 clock=US
+2026-08-25 23:06:10 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:06:11 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0032 < 0.01 (US.COST Δ-4 @ 964.6700 notional=3859)
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0006 < 0.01 (US.KO Δ-7 @ 91.6100 notional=641)
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target +0.72 Coca-Cola. policy tgt +0.72 (long); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:06:11 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=US bar=US:2026-08-25 10:50:00 HK equity≈34518.50 cash=34518.50 | US equity≈990030.17 cash=1258573.95
+2026-08-25 23:06:11 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:07:11 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:07:12 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:07:12 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:07:12 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:07:12 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:07:12 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:07:11.954066.
+2026-08-25 23:07:12 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:07:12 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:07:13 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:07:13 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:07:13.332643 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:07:13 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:07:13.347207 clock=US
+2026-08-25 23:07:14 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:07:14 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0036 < 0.01 (US.COST Δ-4 @ 964.3600 notional=3857)
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0004 < 0.01 (US.KO Δ-4 @ 91.5800 notional=366)
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target +0.72 Coca-Cola. policy tgt +0.72 (long); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:07:14 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=US bar=US:2026-08-25 10:50:00 HK equity≈34518.50 cash=34518.50 | US equity≈990073.25 cash=1258573.95
+2026-08-25 23:07:14 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:08:14 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:08:14 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:08:14 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:08:14 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:08:14 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:08:14 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:08:14.803933.
+2026-08-25 23:08:14 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:08:14 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:08:16 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:08:16 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:08:16.175109 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:08:16 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:08:16.191104 clock=US
+2026-08-25 23:08:17 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:08:18 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0040 < 0.01 (US.COST Δ-5 @ 964.4400 notional=4822)
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0005 < 0.01 (US.KO Δ-6 @ 91.6500 notional=550)
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target +0.72 Coca-Cola. policy tgt +0.72 (long); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:08:18 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=US bar=US:2026-08-25 10:50:00 HK equity≈34518.50 cash=34518.50 | US equity≈990579.48 cash=1258573.95
+2026-08-25 23:08:18 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:09:18 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:09:18 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:09:18 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:09:18 | INFO     | airaire.data_loader | Futu 10-min US.COST: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:09:18 | INFO     | airaire.data_loader | Futu 10-min US.KO: 48 bars (2026-08-24 09:40:00 → 2026-08-25 11:00:00)
+2026-08-25 23:09:18 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:09:18.483925.
+2026-08-25 23:09:18 | INFO     | airaire.data_loader | Futu history overlay: 292 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:09:18 | INFO     | airaire.inference | Catch-up merged 292 live Futu rows into the panel (32788 → 32788).
+2026-08-25 23:09:19 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:09:19 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:09:19.895418 -> bar=9534/9559 dt=2026-08-25 10:50:00
+2026-08-25 23:09:19 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 10:50:00 bar=9534/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:09:19.910416 clock=US
+2026-08-25 23:09:20 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:09:21 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | Same 10-min bar (US:2026-08-25 10:50:00) and news unchanged — skip orders this 60s cycle (no 1-min price chase).
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0024 < 0.01 (US.COST Δ-3 @ 964.9600 notional=2895)
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0008 < 0.01 (US.KO Δ-9 @ 91.5800 notional=824)
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | [preview, no order] Action: Target +0.72 Coca-Cola. policy tgt +0.72 (long); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:09:21 | INFO     | airaire.inference_v2_11 | No fills this cycle. clock=US bar=US:2026-08-25 10:50:00 HK equity≈34518.50 cash=34518.50 | US equity≈989498.65 cash=1258573.95
+2026-08-25 23:09:21 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:10:22 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:10:22 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:10:22 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:10:22 | INFO     | airaire.data_loader | Futu 10-min US.COST: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:10:22 | INFO     | airaire.data_loader | Futu 10-min US.KO: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:10:22 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:10:21.991437.
+2026-08-25 23:10:22 | INFO     | airaire.data_loader | Futu history overlay: 294 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:10:22 | INFO     | airaire.inference | Catch-up merged 294 live Futu rows into the panel (32788 → 32790).
+2026-08-25 23:10:23 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:10:23 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:10:23.383154 -> bar=9535/9559 dt=2026-08-25 11:00:00
+2026-08-25 23:10:23 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 10:50:00 env_now=2026-08-25 11:00:00 bar=9535/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:10:23.396156 clock=US
+2026-08-25 23:10:24 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:10:25 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:10:25 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:10:25 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:10:25 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:10:25 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0031 < 0.01 (US.COST Δ-4 @ 964.4000 notional=3858)
+2026-08-25 23:10:25 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:10:25 | INFO     | airaire.inference_v2_11 | Action: Sell 12611 Coca-Cola. policy tgt -0.44 (short); book 7841→-4770 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:10:25 | INFO     | airaire.inference_v2_11 | place SELL 12611 Coca-Cola @ 91.5300
+2026-08-25 23:10:25 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 23:10:26 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 23:10:26 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 23:10:26 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 7841.0})
+2026-08-25 23:10:26 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:11:26 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:11:26 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:11:26 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:11:26 | INFO     | airaire.data_loader | Futu 10-min US.COST: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:11:26 | INFO     | airaire.data_loader | Futu 10-min US.KO: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:11:27 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:11:26.881078.
+2026-08-25 23:11:27 | INFO     | airaire.data_loader | Futu history overlay: 294 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:11:27 | INFO     | airaire.inference | Catch-up merged 294 live Futu rows into the panel (32790 → 32790).
+2026-08-25 23:11:28 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:11:28 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:11:28.418677 -> bar=9535/9559 dt=2026-08-25 11:00:00
+2026-08-25 23:11:28 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 11:00:00 env_now=2026-08-25 11:00:00 bar=9535/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:11:28.431679 clock=US
+2026-08-25 23:11:29 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:11:30 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:11:30 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:11:30 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:11:30 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:11:30 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0027 < 0.01 (US.COST Δ-3 @ 964.7000 notional=2894)
+2026-08-25 23:11:30 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:11:30 | INFO     | airaire.inference_v2_11 | Action: Sell 12609 Coca-Cola. policy tgt -0.44 (short); book 7841→-4768 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:11:30 | INFO     | airaire.inference_v2_11 | place SELL 12609 Coca-Cola @ 91.5600
+2026-08-25 23:11:30 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 23:11:31 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 23:11:31 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 23:11:31 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 7841.0})
+2026-08-25 23:11:31 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:12:31 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:12:31 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:12:31 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:12:31 | INFO     | airaire.data_loader | Futu 10-min US.COST: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:12:31 | INFO     | airaire.data_loader | Futu 10-min US.KO: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:12:31 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:12:31.668155.
+2026-08-25 23:12:31 | INFO     | airaire.data_loader | Futu history overlay: 294 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:12:31 | INFO     | airaire.inference | Catch-up merged 294 live Futu rows into the panel (32790 → 32790).
+2026-08-25 23:12:33 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:12:33 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:12:33.194865 -> bar=9535/9559 dt=2026-08-25 11:00:00
+2026-08-25 23:12:33 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 11:00:00 env_now=2026-08-25 11:00:00 bar=9535/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:12:33.208869 clock=US
+2026-08-25 23:12:34 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:12:35 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:12:35 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:12:35 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:12:35 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:12:35 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0015 < 0.01 (US.COST Δ-2 @ 965.3200 notional=1931)
+2026-08-25 23:12:35 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:12:35 | INFO     | airaire.inference_v2_11 | Action: Sell 12606 Coca-Cola. policy tgt -0.44 (short); book 7841→-4765 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:12:35 | INFO     | airaire.inference_v2_11 | place SELL 12606 Coca-Cola @ 91.5600
+2026-08-25 23:12:35 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 23:12:36 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 23:12:36 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 23:12:36 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 7841.0})
+2026-08-25 23:12:36 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
+2026-08-25 23:13:36 | INFO     | airaire.data_loader | Futu 10-min HK.00700: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:13:36 | INFO     | airaire.data_loader | Futu 10-min HK.03690: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:13:36 | INFO     | airaire.data_loader | Futu 10-min HK.03750: 66 bars (2026-08-24 09:40:00 → 2026-08-25 16:00:00)
+2026-08-25 23:13:36 | INFO     | airaire.data_loader | Futu 10-min US.COST: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:13:36 | INFO     | airaire.data_loader | Futu 10-min US.KO: 49 bars (2026-08-24 09:40:00 → 2026-08-25 11:10:00)
+2026-08-25 23:13:36 | INFO     | airaire.data_loader | Dropped 2 incomplete 10-min kline(s) still forming at 2026-08-25 23:13:36.437458.
+2026-08-25 23:13:36 | INFO     | airaire.data_loader | Futu history overlay: 294 rows, tickers=['HK.00700', 'HK.03690', 'HK.03750', 'US.COST', 'US.KO'], span=2026-08-24 09:40:00 → 2026-08-25 16:00:00
+2026-08-25 23:13:36 | INFO     | airaire.inference | Catch-up merged 294 live Futu rows into the panel (32790 → 32790).
+2026-08-25 23:13:37 | INFO     | airaire.trading_env | News block aligned: bars=9560 coverage=95.0% sample=[0.2150000035762787, 0.21899999678134918, 0.08100000023841858, 0.0, 0.0]
+2026-08-25 23:13:37 | INFO     | airaire.trading_env | TradingEnv seek_to_datetime target=2026-08-25 11:13:37.798218 -> bar=9535/9559 dt=2026-08-25 11:00:00
+2026-08-25 23:13:37 | INFO     | airaire.inference | State catch-up complete (no orders). env_before=2026-08-25 11:00:00 env_now=2026-08-25 11:00:00 bar=9535/9559 rebuilt=True hk_cash=34518.50 equity=34518.50 seek=2026-08-25 11:13:37.811219 clock=US
+2026-08-25 23:13:38 | INFO     | airaire.news_loader | NewsPoller US.COST (COST) score=0.179 n_headlines=50
+2026-08-25 23:13:39 | INFO     | airaire.news_loader | NewsPoller US.KO (KO) score=0.166 n_headlines=50
+2026-08-25 23:13:39 | INFO     | airaire.inference_v2_11 | HK.00700 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:13:39 | INFO     | airaire.inference_v2_11 | HK.03690 market closed — policy tgt +0.000 (raw -1.000), keep holdings=0.0000, no order.
+2026-08-25 23:13:39 | INFO     | airaire.inference_v2_11 | HK.03750 market closed — policy tgt +1.000 (raw +1.000), keep holdings=0.0000, no order.
+2026-08-25 23:13:39 | INFO     | airaire.inference_v2_11 | skip tiny |Δw|=0.0014 < 0.01 (US.COST Δ-2 @ 965.2800 notional=1931)
+2026-08-25 23:13:39 | INFO     | airaire.inference_v2_11 | Action: Target -1.00 Costco. policy tgt -1.00 (full short); news +0.18 (Δ+0.00, no jump).
+2026-08-25 23:13:39 | INFO     | airaire.inference_v2_11 | Action: Sell 12606 Coca-Cola. policy tgt -0.44 (short); book 7841→-4765 (on fill, not submit); news +0.17 (Δ+0.00, no jump).
+2026-08-25 23:13:39 | INFO     | airaire.inference_v2_11 | place SELL 12606 Coca-Cola @ 91.5400
+2026-08-25 23:13:39 | ERROR    | airaire.inference | place_order failed SELL US.KO classified=position raw=Not enough positions
+2026-08-25 23:13:40 | INFO     | airaire.utils | Telegram alert sent.
+2026-08-25 23:13:40 | ERROR    | airaire.inference_v2_11 | Compensation: no retry for classified=position. Book unchanged.
+2026-08-25 23:13:40 | INFO     | airaire.inference | Wrote state_v2_11.pkl (cash=34518.50 equity=34518.50 holdings={'HK.00700': 0.0, 'HK.03690': 0.0, 'HK.03750': 0.0, 'US.COST': -1023.0, 'US.KO': 7841.0})
+2026-08-25 23:13:40 | INFO     | airaire.dashboard_push | Dashboard snapshot pushed kind=live equity=34518.50
