@@ -5,10 +5,11 @@ A paper-trading desk that sizes five names from **10-minute prices**, a **calend
 The bet is not “predict tomorrow.” It is **see the headline and the bar a little earlier** than a slow trend-follower, in a noisy HK-tech vs US-defensive book.
 
 **Watch the paper book:** [AIRAIRE](https://airaire.vercel.app) (pw:Public)
-**Dashboard Demo Video:** [AIRAIRE - Paper Book Demo](https://youtube.com/shorts/8_Viz2aZWdI?feature=share)
 
 - Paper only. No real money. No warranty.
 - Tomorrow the market will do something we did not predict.
+
+**Dashboard Demo Video:** [AIRAIRE - Paper Book Demo](https://youtube.com/shorts/8_Viz2aZWdI?feature=share)
 
 **Now (Aug 2026):** V2 is what the live loop loads (`models/news_gpu_v2/best_model.zip`, promoted Calmar ≈ 4.91). Phase 6 / V3 is a **parallel research retrain** — volume plus Hang Seng and S&P 500 in the observation. It is not live yet.
 
