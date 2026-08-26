@@ -4,7 +4,8 @@ A paper-trading desk that sizes five names from **10-minute prices**, a **calend
 
 The bet is not “predict tomorrow.” It is **see the headline and the bar a little earlier** than a slow trend-follower, in a noisy HK-tech vs US-defensive book.
 
-**Watch the paper book:** [airaire.vercel.app](https://airaire.vercel.app) (pw:Public)
+**Watch the paper book:** [AIRAIRE](https://airaire.vercel.app) (pw:Public)
+**Dashboard Demo Video:** [AIRAIRE - Paper Book Demo](https://youtube.com/shorts/8_Viz2aZWdI?feature=share)
 
 - Paper only. No real money. No warranty.
 - Tomorrow the market will do something we did not predict.
