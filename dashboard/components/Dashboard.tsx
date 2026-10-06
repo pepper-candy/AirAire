@@ -377,9 +377,9 @@ function BookSwitch({
   );
 }
 
-export function Dashboard({ initial }: { initial: SnapshotResponse }) {
+export function Dashboard({ initial, startDemo = false }: { initial: SnapshotResponse; startDemo?: boolean }) {
   const [data, setData] = useState(initial);
-  const [demo, setDemo] = useState(false);
+  const [demo, setDemo] = useState(startDemo);
   const [share, setShare] = useState(0.5);
   const [range, setRange] = useState<RangeMode>(initial.equityMeta?.range === "week" ? "week" : "today");
   const [day, setDay] = useState(initial.equityMeta?.day || hkYmd());
